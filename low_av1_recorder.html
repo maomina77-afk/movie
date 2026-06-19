@@ -4,120 +4,80 @@
 <meta charset="UTF-8">
 <title>AV1 低容量動画撮影 PRO</title>
 <style>
-  body { font-family: sans-serif; margin: 0; padding: 8px; background: #111; color: #fff; }
-  h2 { margin: 4px 0 8px; font-size: 20px; }
-  h3 { margin: 6px 0; font-size: 18px; }
+ /* 全体 */
+body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+  color: #fff;
+  font-family: sans-serif;
+}
 
-  #settingsPanel {
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 8px;
-    margin-bottom: 8px;
-    background: #222;
-  }
-  label, select { font-size: 16px; }
-  select, button {
-    font-size: 18px;
-    padding: 8px 10px;
-    margin: 4px 0;
-    width: 100%;
-    box-sizing: border-box;
-  }
+/* プレビュー */
+#previewWrapper {
+  position: relative;
+  width: 100vw;
+  height: 70vh;
+  overflow: hidden;
+}
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-  #previewContainer {
-    position: relative;
-    width: 100%;
-    max-height: 70vh;
-    display: flex;
-    flex-direction: row;
-  }
-  #previewWrapper {
-    position: relative;
-    flex: 1;
-  }
-  video {
-    width: 100%;
-    height: auto;
-    background: #000;
-    border-radius: 8px;
-  }
+/* グリッド */
+#gridOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+}
+.grid-line {
+  position: absolute;
+  background: rgba(255,255,255,0.4);
+}
+.grid-v1 { left: 33.33%; top: 0; bottom: 0; width: 2px; }
+.grid-v2 { left: 66.66%; top: 0; bottom: 0; width: 2px; }
+.grid-h1 { top: 33.33%; left: 0; right: 0; height: 2px; }
+.grid-h2 { top: 66.66%; left: 0; right: 0; height: 2px; }
 
-  /* グリッドライン */
-  #gridOverlay {
-    pointer-events: none;
-    position: absolute;
-    inset: 0;
-    display: none;
-  }
-  .grid-line {
-    position: absolute;
-    background: rgba(255,255,255,0.4);
-  }
-  .grid-v1 { left: 33.33%; top: 0; bottom: 0; width: 1px; }
-  .grid-v2 { left: 66.66%; top: 0; bottom: 0; width: 1px; }
-  .grid-h1 { top: 33.33%; left: 0; right: 0; height: 1px; }
-  .grid-h2 { top: 66.66%; left: 0; right: 0; height: 1px; }
+/* 録画ボタン */
+#recordBtn {
+  width: 100%;
+  height: 70px;
+  font-size: 26px;
+  margin-top: 6px;
+  background: #c62828;
+  border: none;
+  border-radius: 8px;
+}
+#recordBtn.recording {
+  background: #2e7d32;
+}
 
-  /* 右側ズームスライダー */
-  #rightControls {
-    width: 60px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-left: 4px;
-  }
-  #zoomSlider {
-    writing-mode: bt-lr;
-    -webkit-appearance: slider-vertical;
-    width: 40px;
-    height: 200px;
-  }
-  #zoomLabel {
-    font-size: 14px;
-    margin-bottom: 4px;
-  }
+/* 下部コントロール */
+.controlRow {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.controlRow label {
+  font-size: 20px;
+}
+.controlRow input[type="range"] {
+  width: 100%;
+  height: 40px;
+}
 
-  /* 下部コントロール（録画＋露出＋フォーカス） */
-  #bottomControls {
-    margin-top: 8px;
-  }
-  #recordBtn {
-    font-size: 22px;
-    padding: 10px;
-    width: 100%;
-    margin-bottom: 6px;
-    background: #c62828;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-  }
-  #recordBtn.recording {
-    background: #2e7d32;
-  }
+/* グリッドボタン */
+#gridToggleBtn {
+  width: 100%;
+  height: 50px;
+  font-size: 20px;
+  margin-top: 4px;
+}
 
-  .sliderRow {
-    margin: 4px 0;
-  }
-  .sliderRow label {
-    display: block;
-    font-size: 16px;
-    margin-bottom: 2px;
-  }
-  .sliderRow input[type="range"] {
-    width: 100%;
-  }
-
-  #status {
-    margin-top: 4px;
-    font-size: 14px;
-  }
-
-  #gridToggleBtn {
-    font-size: 16px;
-    padding: 6px;
-    margin-top: 4px;
-    width: 100%;
-  }
 </style>
 </head>
 <body>
@@ -348,24 +308,48 @@ function autoSave(blob) {
 document.getElementById("applySettings").onclick = () => {
   startCamera();
 };
-
+// 差し替えここから
+/* ズーム（横スライダー） */
 zoomSlider.addEventListener("input", () => {
   if (!videoTrack || !zoomSupported) return;
-  const z = parseFloat(zoomSlider.value);
-  videoTrack.applyConstraints({ advanced: [{ zoom: z }] }).catch(console.error);
+  videoTrack.applyConstraints({ advanced: [{ zoom: parseFloat(zoomSlider.value) }] });
 });
 
-exposureSlider.addEventListener("input", () => {
-  if (!videoTrack || !exposureSupported) return;
-  const v = parseFloat(exposureSlider.value);
-  videoTrack.applyConstraints({ advanced: [{ exposureCompensation: v }] }).catch(console.error);
+/* グリッド ON/OFF */
+gridToggleBtn.addEventListener("click", () => {
+  const show = gridOverlay.style.display !== "block";
+  gridOverlay.style.display = show ? "block" : "none";
+  gridToggleBtn.textContent = show ? "グリッド OFF" : "グリッド ON";
 });
 
-focusModeBtn.addEventListener("click", () => {
-  if (!focusDistanceSupported) {
-    // capabilities がない場合は何もしない
-    return;
+/* 露出 AUTO / MANUAL */
+exposureModeBtn.addEventListener("click", () => {
+  if (!exposureSupported) return;
+
+  if (exposureMode === "auto") {
+    exposureMode = "manual";
+    exposureModeBtn.textContent = "露出：MANUAL";
+    exposureRow.style.display = "block";
+  } else {
+    exposureMode = "auto";
+    exposureModeBtn.textContent = "露出：AUTO";
+    exposureRow.style.display = "none";
+    videoTrack.applyConstraints({ advanced: [{ exposureMode: "continuous" }] });
   }
+});
+
+/* 露出スライダー */
+exposureSlider.addEventListener("input", () => {
+  if (exposureMode !== "manual") return;
+  videoTrack.applyConstraints({
+    advanced: [{ exposureCompensation: parseFloat(exposureSlider.value) }]
+  });
+});
+
+/* フォーカス AUTO / MANUAL */
+focusModeBtn.addEventListener("click", () => {
+  if (!focusDistanceSupported) return;
+
   if (focusMode === "auto") {
     focusMode = "manual";
     focusModeBtn.textContent = "フォーカス：MANUAL";
@@ -374,7 +358,19 @@ focusModeBtn.addEventListener("click", () => {
     focusMode = "auto";
     focusModeBtn.textContent = "フォーカス：AUTO";
     focusRow.style.display = "none";
+    videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
   }
+});
+
+/* フォーカススライダー */
+focusSlider.addEventListener("input", () => {
+  if (focusMode !== "manual") return;
+  videoTrack.applyConstraints({
+    advanced: [{ focusDistance: parseFloat(focusSlider.value) }]
+  });
+});
+
+ // 差し替えここまで 
   applyFocusMode();
 });
 
