@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>AV1 低容量動画録画</title>
+<style>
+  body { font-family: sans-serif; padding: 10px; }
+  video { width: 100%; max-width: 480px; background: #000; }
+  button { padding: 10px 16px; font-size: 16px; margin-top: 10px; }
+  #status { margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h2>AV1 低容量動画録画（自動保存）</h2>
+<video id="preview" autoplay playsinline muted></video>
+<button id="recordBtn">録画開始</button>
+<div id="status">準備中...</div>
+
+<script>
+const preview = document.getElementById("preview");
+const recordBtn = document.getElementById("recordBtn");
+const statusEl = document.getElementById("status");
+
+let stream = null;
+let recorder = null;
+let chunks = [];
+
+// カメラ初期化（低解像度）
+async function initCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: {
+        width: { ideal: 640 },
+        height: { ideal: 360 },
+        frameRate: { ideal: 15 },
+        facingMode: "environment"
+      }
+    });
+    preview.srcObject = stream;
+    statusEl.textContent = "カメラ準備完了";
+  } catch (e) {
+    statusEl.textContent = "カメラ取得失敗: " + e.message;
+  }
+}
+
+// MediaRecorder 初期化（AV1 → VP9 → VP8）
+function createRecorder() {
+  const optionsList = [
+    { mimeType: "video/webm;codecs=av1", videoBitsPerSecond: 250000 },
+    { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: 250000 },
+    { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: 250000 },
+    {}
+  ];
+
+  for (const opt of optionsList) {
+    try {
+      const r = new MediaRecorder(stream, opt);
+      console.log("使用コーデック:", opt);
+      return r;
+    } catch (e) {
+      console.warn("失敗:", opt, e);
+    }
+  }
+  return null;
+}
+
+// 自動保存
+function autoSave(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const now = new Date();
+  const fileName =
+    "video_" +
+    now.getFullYear() +
+    ("0" + (now.getMonth() + 1)).slice(-2) +
+    ("0" + now.getDate()).slice(-2) + "_" +
+    ("0" + now.getHours()).slice(-2) +
+    ("0" + now.getMinutes()).slice(-2) +
+    ("0" + now.getSeconds()).slice(-2) +
+    ".webm";
+
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+recordBtn.onclick = () => {
+  if (!recorder) {
+    recorder = createRecorder();
+    if (!recorder) {
+      statusEl.textContent = "MediaRecorder が利用できません";
+      return;
+    }
+
+    recorder.ondataavailable = e => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: "video/webm" });
+      autoSave(blob);
+      statusEl.textContent = "保存完了";
+      chunks = [];
+    };
+  }
+
+  if (recorder.state === "inactive") {
+    recorder.start();
+    recordBtn.textContent = "録画停止";
+    statusEl.textContent = "録画中...";
+  } else {
+    recorder.stop();
+    recordBtn.textContent = "録画開始";
+    statusEl.textContent = "保存中...";
+  }
+};
+
+initCamera();
+</script>
+
+</body>
+</html>
