@@ -2,50 +2,308 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>AV1 低容量動画録画</title>
+<title>AV1 低容量動画撮影 PRO</title>
 <style>
-  body { font-family: sans-serif; padding: 10px; }
-  video { width: 100%; max-width: 480px; background: #000; }
-  button { padding: 10px 16px; font-size: 16px; margin-top: 10px; }
-  #status { margin-top: 10px; }
+  body { font-family: sans-serif; margin: 0; padding: 8px; background: #111; color: #fff; }
+  h2 { margin: 4px 0 8px; font-size: 20px; }
+  h3 { margin: 6px 0; font-size: 18px; }
+
+  #settingsPanel {
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #222;
+  }
+  label, select { font-size: 16px; }
+  select, button {
+    font-size: 18px;
+    padding: 8px 10px;
+    margin: 4px 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #previewContainer {
+    position: relative;
+    width: 100%;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: row;
+  }
+  #previewWrapper {
+    position: relative;
+    flex: 1;
+  }
+  video {
+    width: 100%;
+    height: auto;
+    background: #000;
+    border-radius: 8px;
+  }
+
+  /* グリッドライン */
+  #gridOverlay {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    display: none;
+  }
+  .grid-line {
+    position: absolute;
+    background: rgba(255,255,255,0.4);
+  }
+  .grid-v1 { left: 33.33%; top: 0; bottom: 0; width: 1px; }
+  .grid-v2 { left: 66.66%; top: 0; bottom: 0; width: 1px; }
+  .grid-h1 { top: 33.33%; left: 0; right: 0; height: 1px; }
+  .grid-h2 { top: 66.66%; left: 0; right: 0; height: 1px; }
+
+  /* 右側ズームスライダー */
+  #rightControls {
+    width: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 4px;
+  }
+  #zoomSlider {
+    writing-mode: bt-lr;
+    -webkit-appearance: slider-vertical;
+    width: 40px;
+    height: 200px;
+  }
+  #zoomLabel {
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  /* 下部コントロール（録画＋露出＋フォーカス） */
+  #bottomControls {
+    margin-top: 8px;
+  }
+  #recordBtn {
+    font-size: 22px;
+    padding: 10px;
+    width: 100%;
+    margin-bottom: 6px;
+    background: #c62828;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+  }
+  #recordBtn.recording {
+    background: #2e7d32;
+  }
+
+  .sliderRow {
+    margin: 4px 0;
+  }
+  .sliderRow label {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+  .sliderRow input[type="range"] {
+    width: 100%;
+  }
+
+  #status {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  #gridToggleBtn {
+    font-size: 16px;
+    padding: 6px;
+    margin-top: 4px;
+    width: 100%;
+  }
 </style>
 </head>
 <body>
 
-<h2>AV1 低容量動画録画（自動保存）</h2>
-<video id="preview" autoplay playsinline muted></video>
-<button id="recordBtn">録画開始</button>
-<div id="status">準備中...</div>
+<h2>AV1 低容量動画撮影 PRO</h2>
+
+<div id="settingsPanel">
+  <h3>撮影設定</h3>
+
+  <label for="resolution">解像度：</label>
+  <select id="resolution">
+    <option value="360x640" selected>360 × 640（デフォルト）</option>
+    <option value="320x180">320 × 180（超低容量）</option>
+    <option value="1280x720">1280 × 720（高画質）</option>
+  </select>
+
+  <label for="fps">FPS：</label>
+  <select id="fps">
+    <option value="10" selected>10（デフォルト）</option>
+    <option value="15">15</option>
+    <option value="30">30</option>
+  </select>
+
+  <button id="applySettings">設定を適用（カメラ再起動）</button>
+</div>
+
+<div id="previewContainer">
+  <div id="previewWrapper">
+    <video id="preview" autoplay playsinline muted></video>
+    <div id="gridOverlay">
+      <div class="grid-line grid-v1"></div>
+      <div class="grid-line grid-v2"></div>
+      <div class="grid-line grid-h1"></div>
+      <div class="grid-line grid-h2"></div>
+    </div>
+  </div>
+
+  <div id="rightControls">
+    <div id="zoomLabel">ズーム</div>
+    <input id="zoomSlider" type="range" min="1" max="1" step="0.01" value="1">
+    <button id="gridToggleBtn">グリッド ON</button>
+  </div>
+</div>
+
+<div id="bottomControls">
+  <button id="recordBtn">録画開始</button>
+
+  <div class="sliderRow" id="exposureRow" style="display:none;">
+    <label for="exposureSlider">露出</label>
+    <input id="exposureSlider" type="range" min="0" max="0" step="1" value="0">
+  </div>
+
+  <div class="sliderRow">
+    <label>フォーカスモード</label>
+    <button id="focusModeBtn">フォーカス：AUTO</button>
+  </div>
+
+  <div class="sliderRow" id="focusRow" style="display:none;">
+    <label for="focusSlider">フォーカス（MANUAL）</label>
+    <input id="focusSlider" type="range" min="0" max="1" step="0.01" value="0">
+  </div>
+
+  <div id="status">準備中...</div>
+</div>
 
 <script>
-const preview = document.getElementById("preview");
-const recordBtn = document.getElementById("recordBtn");
-const statusEl = document.getElementById("status");
-
 let stream = null;
 let recorder = null;
 let chunks = [];
+let videoTrack = null;
+let capabilities = null;
+let settings = null;
 
-// カメラ初期化（低解像度）
-async function initCamera() {
+let focusMode = "auto"; // "auto" or "manual"
+let zoomSupported = false;
+let exposureSupported = false;
+let focusDistanceSupported = false;
+
+const preview = document.getElementById("preview");
+const statusEl = document.getElementById("status");
+const zoomSlider = document.getElementById("zoomSlider");
+const zoomLabel = document.getElementById("zoomLabel");
+const exposureRow = document.getElementById("exposureRow");
+const exposureSlider = document.getElementById("exposureSlider");
+const focusModeBtn = document.getElementById("focusModeBtn");
+const focusRow = document.getElementById("focusRow");
+const focusSlider = document.getElementById("focusSlider");
+const gridOverlay = document.getElementById("gridOverlay");
+const gridToggleBtn = document.getElementById("gridToggleBtn");
+const recordBtn = document.getElementById("recordBtn");
+
+async function startCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    videoTrack = null;
+  }
+
+  const res = document.getElementById("resolution").value.split("x");
+  const fps = parseInt(document.getElementById("fps").value, 10);
+
+  const constraints = {
+    audio: true,
+    video: {
+      width: { ideal: parseInt(res[0], 10) },
+      height: { ideal: parseInt(res[1], 10) },
+      frameRate: { ideal: fps },
+      facingMode: "environment"
+    }
+  };
+
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: {
-        width: { ideal: 640 },
-        height: { ideal: 360 },
-        frameRate: { ideal: 15 },
-        facingMode: "environment"
-      }
-    });
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
     preview.srcObject = stream;
     statusEl.textContent = "カメラ準備完了";
+
+    videoTrack = stream.getVideoTracks()[0];
+    capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+    settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+
+    setupCameraControls();
   } catch (e) {
+    console.error(e);
     statusEl.textContent = "カメラ取得失敗: " + e.message;
   }
 }
 
-// MediaRecorder 初期化（AV1 → VP9 → VP8）
+function setupCameraControls() {
+  zoomSupported = !!capabilities.zoom;
+  exposureSupported = !!capabilities.exposureCompensation;
+  focusDistanceSupported = !!capabilities.focusDistance;
+
+  // ズーム
+  if (zoomSupported) {
+    const min = capabilities.zoom.min || 1;
+    const max = capabilities.zoom.max || 1;
+    const step = capabilities.zoom.step || 0.1;
+    zoomSlider.min = min;
+    zoomSlider.max = max;
+    zoomSlider.step = step;
+    zoomSlider.value = settings.zoom || min;
+    zoomLabel.textContent = "ズーム";
+    zoomSlider.disabled = false;
+  } else {
+    zoomSlider.min = 1;
+    zoomSlider.max = 1;
+    zoomSlider.value = 1;
+    zoomSlider.disabled = true;
+    zoomLabel.textContent = "ズーム不可";
+  }
+
+  // 露出
+  if (exposureSupported) {
+    exposureRow.style.display = "block";
+    const min = capabilities.exposureCompensation.min;
+    const max = capabilities.exposureCompensation.max;
+    const step = capabilities.exposureCompensation.step || 1;
+    exposureSlider.min = min;
+    exposureSlider.max = max;
+    exposureSlider.step = step;
+    exposureSlider.value = settings.exposureCompensation || 0;
+  } else {
+    exposureRow.style.display = "none";
+  }
+
+  // フォーカス
+  if (focusDistanceSupported) {
+    // MANUAL 用スライダーは capabilities に合わせる
+    const min = capabilities.focusDistance.min || 0;
+    const max = capabilities.focusDistance.max || 1;
+    const step = capabilities.focusDistance.step || 0.01;
+    focusSlider.min = min;
+    focusSlider.max = max;
+    focusSlider.step = step;
+    focusSlider.value = settings.focusDistance || min;
+  } else {
+    focusRow.style.display = "none";
+  }
+
+  // 初期は AUTO
+  focusMode = "auto";
+  focusModeBtn.textContent = "フォーカス：AUTO";
+  focusRow.style.display = "none";
+  applyFocusMode();
+}
+
 function createRecorder() {
   const optionsList = [
     { mimeType: "video/webm;codecs=av1", videoBitsPerSecond: 250000 },
@@ -53,20 +311,18 @@ function createRecorder() {
     { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: 250000 },
     {}
   ];
-
   for (const opt of optionsList) {
     try {
       const r = new MediaRecorder(stream, opt);
-      console.log("使用コーデック:", opt);
+      console.log("MediaRecorder created with", opt);
       return r;
     } catch (e) {
-      console.warn("失敗:", opt, e);
+      console.warn("MediaRecorder option failed:", opt, e);
     }
   }
   return null;
 }
 
-// 自動保存
 function autoSave(blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -87,38 +343,101 @@ function autoSave(blob) {
   URL.revokeObjectURL(url);
 }
 
-recordBtn.onclick = () => {
+// イベント
+
+document.getElementById("applySettings").onclick = () => {
+  startCamera();
+};
+
+zoomSlider.addEventListener("input", () => {
+  if (!videoTrack || !zoomSupported) return;
+  const z = parseFloat(zoomSlider.value);
+  videoTrack.applyConstraints({ advanced: [{ zoom: z }] }).catch(console.error);
+});
+
+exposureSlider.addEventListener("input", () => {
+  if (!videoTrack || !exposureSupported) return;
+  const v = parseFloat(exposureSlider.value);
+  videoTrack.applyConstraints({ advanced: [{ exposureCompensation: v }] }).catch(console.error);
+});
+
+focusModeBtn.addEventListener("click", () => {
+  if (!focusDistanceSupported) {
+    // capabilities がない場合は何もしない
+    return;
+  }
+  if (focusMode === "auto") {
+    focusMode = "manual";
+    focusModeBtn.textContent = "フォーカス：MANUAL";
+    focusRow.style.display = "block";
+  } else {
+    focusMode = "auto";
+    focusModeBtn.textContent = "フォーカス：AUTO";
+    focusRow.style.display = "none";
+  }
+  applyFocusMode();
+});
+
+function applyFocusMode() {
+  if (!videoTrack) return;
+  if (focusMode === "auto") {
+    // 端末によっては focusMode がない場合もあるので try
+    videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+  } else {
+    const d = parseFloat(focusSlider.value);
+    videoTrack.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: d }] }).catch(console.error);
+  }
+}
+
+focusSlider.addEventListener("input", () => {
+  if (focusMode !== "manual" || !videoTrack || !focusDistanceSupported) return;
+  const d = parseFloat(focusSlider.value);
+  videoTrack.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: d }] }).catch(console.error);
+});
+
+gridToggleBtn.addEventListener("click", () => {
+  if (gridOverlay.style.display === "none" || gridOverlay.style.display === "") {
+    gridOverlay.style.display = "block";
+    gridToggleBtn.textContent = "グリッド OFF";
+  } else {
+    gridOverlay.style.display = "none";
+    gridToggleBtn.textContent = "グリッド ON";
+  }
+});
+
+recordBtn.addEventListener("click", () => {
   if (!recorder) {
     recorder = createRecorder();
     if (!recorder) {
       statusEl.textContent = "MediaRecorder が利用できません";
       return;
     }
-
     recorder.ondataavailable = e => {
-      if (e.data.size > 0) chunks.push(e.data);
+      if (e.data && e.data.size > 0) chunks.push(e.data);
     };
-
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: "video/webm" });
+      chunks = [];
       autoSave(blob);
       statusEl.textContent = "保存完了";
-      chunks = [];
+      recordBtn.classList.remove("recording");
+      recordBtn.textContent = "録画開始";
     };
   }
 
   if (recorder.state === "inactive") {
     recorder.start();
+    recordBtn.classList.add("recording");
     recordBtn.textContent = "録画停止";
     statusEl.textContent = "録画中...";
-  } else {
+  } else if (recorder.state === "recording") {
     recorder.stop();
-    recordBtn.textContent = "録画開始";
     statusEl.textContent = "保存中...";
   }
-};
+});
 
-initCamera();
+// 初期起動
+startCamera();
 </script>
 
 </body>
