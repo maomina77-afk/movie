@@ -2,46 +2,41 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>AV1 低容量動画撮影（全画面UI）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AV1 低容量動画撮影</title>
 <style>
+  :root {
+    --primary: #ff3b30;
+    --primary-active: #ff6b63;
+    --recording: #34c759;
+    --bg-overlay: rgba(0, 0, 0, 0.6);
+    --text: #ffffff;
+  }
+
   body {
     margin: 0;
     padding: 0;
-    background: #111;
-    color: #fff;
-    font-family: sans-serif;
-  }
-  h2 {
-    margin: 8px;
-    font-size: 22px;
-  }
-  #settingsPanel {
-    margin: 0 8px;
-    padding: 8px;
-    background: #222;
-    border-radius: 8px;
-    border: 1px solid #444;
-  }
-  select, button {
-    width: 100%;
-    font-size: 20px;
-    padding: 10px;
-    margin-top: 6px;
-    box-sizing: border-box;
+    background: #000;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden; /* スクロール禁止 */
+    touch-action: none;
   }
 
-  /* プレビュー */
+  /* 全画面プレビュー */
   #previewWrapper {
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
-    height: 70vh;
-    overflow: hidden;
+    height: 100vh;
+    z-index: 1;
     background: #000;
   }
   video {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: contain; /* 画面に収める（coverにすると見切れるため） */
   }
 
   /* グリッド */
@@ -50,62 +45,157 @@
     inset: 0;
     pointer-events: none;
     display: none;
+    z-index: 2;
   }
   .grid-line {
     position: absolute;
     background: rgba(255,255,255,0.4);
   }
-  .grid-v1 { left: 33.33%; top: 0; bottom: 0; width: 2px; }
-  .grid-v2 { left: 66.66%; top: 0; bottom: 0; width: 2px; }
-  .grid-h1 { top: 33.33%; left: 0; right: 0; height: 2px; }
-  .grid-h2 { top: 66.66%; left: 0; right: 0; height: 2px; }
+  .grid-v1 { left: 33.33%; top: 0; bottom: 0; width: 1px; }
+  .grid-v2 { left: 66.66%; top: 0; bottom: 0; width: 1px; }
+  .grid-h1 { top: 33.33%; left: 0; right: 0; height: 1px; }
+  .grid-h2 { top: 66.66%; left: 0; right: 0; height: 1px; }
 
-  #recordBtn {
-    width: calc(100vw - 16px);
-    margin: 6px 8px;
-    height: 70px;
-    font-size: 26px;
-    background: #c62828;
-    border: none;
-    border-radius: 8px;
-    color: #fff;
+  /* UIレイヤー (カメラの上に重なる部分) */
+  #uiLayer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none; /* UIの隙間は下のカメラを触れるように */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
-  #recordBtn.recording { background: #2e7d32; }
+
+  /* 操作可能な要素のポインターイベントを復活 */
+  #uiLayer > * {
+    pointer-events: auto;
+  }
+
+  /* 上部バー */
+  #topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+  }
+
+  #status {
+    font-size: 14px;
+    background: rgba(0,0,0,0.5);
+    padding: 4px 10px;
+    border-radius: 12px;
+    backdrop-filter: blur(4px);
+  }
+
+  .icon-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    backdrop-filter: blur(4px);
+  }
+
+  /* 設定パネル (モーダル) */
+  #settingsPanel {
+    position: absolute;
+    top: 60px;
+    right: 16px;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 16px;
+    width: 240px;
+    display: none;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #settingsPanel.show { display: block; }
+  #settingsPanel label { display: block; font-size: 12px; margin-bottom: 4px; color: #ccc; }
+  #settingsPanel select { width: 100%; margin-bottom: 12px; padding: 8px; border-radius: 6px; background: #333; color: white; border: none; }
+  #applySettings { width: 100%; padding: 10px; background: #444; color: white; border: none; border-radius: 6px; font-weight: bold; }
+
+  /* 下部コントロールエリア */
+  #bottomBar {
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+    padding: 20px 16px 40px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* スライダーとトグルボタンの行 */
+  .control-group {
+    background: var(--bg-overlay);
+    backdrop-filter: blur(4px);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
 
   .row {
     display: flex;
-    flex-direction: row;
-    gap: 8px;
-    margin: 6px 8px;
+    align-items: center;
+    gap: 12px;
   }
-  .row > * { flex: 1; }
-  .labelRow { font-size: 18px; margin-bottom: 4px; }
-  input[type="range"] { width: 100%; height: 40px; }
+  .row-label { width: 60px; font-size: 12px; text-align: right; color: #aaa; }
+  .row-control { flex: 1; display: flex; align-items: center; gap: 8px; }
+  
+  input[type="range"] {
+    width: 100%;
+    height: 30px;
+    margin: 0;
+  }
 
-  #status { margin: 8px; font-size: 16px; }
+  .toggle-btn {
+    flex: 1;
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .toggle-btn.active { background: #555; border-color: #777; }
+
+  /* 録画ボタンエリア */
+  #recordContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 16px;
+  }
+
+  #recordBtn {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 4px solid white;
+    outline: 2px solid transparent;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    transition: all 0.2s ease;
+    text-indent: -9999px; /* 文字を隠す */
+  }
+  
+  #recordBtn:active { transform: scale(0.95); background: var(--primary-active); }
+  
+  #recordBtn.recording {
+    background: var(--recording);
+    border-radius: 20px; /* 録画中は四角っぽくする */
+    transform: scale(0.8);
+  }
+
 </style>
 </head>
 <body>
-
-<h2>AV1 低容量動画撮影</h2>
-
-<div id="settingsPanel">
-  <label>解像度：</label>
-  <select id="resolution">
-    <option value="480x640" selected>480 × 640（デフォルト）</option>
-    <option value="135x180">135 × 180（超低容量）</option>
-    <option value="960x1280">960 × 1280（高画質）</option>
-  </select>
-
-  <label>FPS：</label>
-  <select id="fps">
-    <option value="10" selected>10（デフォルト）</option>
-    <option value="15">15</option>
-    <option value="30">30</option>
-  </select>
-
-  <button id="applySettings">設定を適用（カメラ再起動）</button>
-</div>
 
 <div id="previewWrapper">
   <video id="preview" autoplay playsinline muted></video>
@@ -117,43 +207,90 @@
   </div>
 </div>
 
-<button id="recordBtn">録画開始</button>
-
-<!-- 下部コントロール -->
-<div class="row">
-  <div>
-    <div class="labelRow">ズーム</div>
-    <input id="zoomSlider" type="range" min="1" max="1" step="0.01" value="1">
+<div id="uiLayer">
+  
+  <div id="topBar">
+    <button id="gridToggleBtn" class="icon-btn">グリッド</button>
+    <div id="status">準備中...</div>
+    <button id="settingsToggleBtn" class="icon-btn">⚙️ 設定</button>
   </div>
-  <div>
-    <div class="labelRow">&nbsp;</div>
-    <button id="gridToggleBtn">グリッド ON</button>
+
+  <div id="settingsPanel">
+    <label>解像度：</label>
+    <select id="resolution">
+      <option value="480x640" selected>480 × 640（標準）</option>
+      <option value="135x180">135 × 180（超低容量）</option>
+      <option value="960x1280">960 × 1280（高画質）</option>
+    </select>
+    <label>FPS：</label>
+    <select id="fps">
+      <option value="10" selected>10 fps</option>
+      <option value="15">15 fps</option>
+      <option value="30">30 fps</option>
+    </select>
+    <button id="applySettings">適用（再起動）</button>
+  </div>
+
+  <div id="bottomBar">
+    
+    <div class="control-group">
+      <div class="row">
+        <div class="row-label">ズーム</div>
+        <div class="row-control">
+          <input id="zoomSlider" type="range" min="1" max="1" step="0.01" value="1">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row-label">露出</div>
+        <div class="row-control">
+          <button id="exposureModeBtn" class="toggle-btn">AUTO</button>
+        </div>
+      </div>
+      <div class="row" id="exposureRow" style="display:none;">
+        <div class="row-label"></div>
+        <div class="row-control">
+          <input id="exposureSlider" type="range" min="0" max="0" step="1" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row-label">フォーカス</div>
+        <div class="row-control">
+          <button id="focusModeBtn" class="toggle-btn">AUTO</button>
+        </div>
+      </div>
+      <div class="row" id="focusRow" style="display:none;">
+        <div class="row-label"></div>
+        <div class="row-control">
+          <input id="focusSlider" type="range" min="0" max="1" step="0.01" value="0">
+        </div>
+      </div>
+    </div>
+
+    <div id="recordContainer">
+      <button id="recordBtn">録画開始</button>
+    </div>
+
   </div>
 </div>
-
-<div class="row">
-  <button id="exposureModeBtn">露出：AUTO</button>
-</div>
-<div class="row" id="exposureRow" style="display:none;">
-  <div>
-    <div class="labelRow">露出（MANUAL）</div>
-    <input id="exposureSlider" type="range" min="0" max="0" step="1" value="0">
-  </div>
-</div>
-
-<div class="row">
-  <button id="focusModeBtn">フォーカス：AUTO</button>
-</div>
-<div class="row" id="focusRow" style="display:none;">
-  <div>
-    <div class="labelRow">フォーカス（MANUAL）</div>
-    <input id="focusSlider" type="range" min="0" max="1" step="0.01" value="0">
-  </div>
-</div>
-
-<div id="status">準備中...</div>
 
 <script>
+// UI制御用追加スクリプト
+const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+
+settingsToggleBtn.addEventListener('click', () => {
+  settingsPanel.classList.toggle('show');
+});
+
+// 設定適用後にパネルを閉じる
+document.getElementById("applySettings").addEventListener("click", () => {
+  settingsPanel.classList.remove('show');
+});
+
+
+// 以下、元のJavaScriptロジック（そのまま）
 let stream, recorder, chunks = [];
 let videoTrack, capabilities, settings;
 let zoomSupported, exposureSupported, focusDistanceSupported;
@@ -188,7 +325,7 @@ async function startCamera() {
   try {
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     preview.srcObject = stream;
-    statusEl.textContent = "カメラ準備完了";
+    statusEl.textContent = "待機中";
     videoTrack = stream.getVideoTracks()[0];
     capabilities = videoTrack.getCapabilities();
     settings = videoTrack.getSettings();
@@ -226,11 +363,11 @@ function setupControls() {
     exposureSlider.step = step;
     exposureSlider.value = settings.exposureCompensation || 0;
     exposureMode = "auto";
-    exposureModeBtn.textContent = "露出：AUTO";
+    exposureModeBtn.textContent = "AUTO";
     exposureRow.style.display = "none";
   } else {
     exposureModeBtn.disabled = true;
-    exposureModeBtn.textContent = "露出：未対応";
+    exposureModeBtn.textContent = "未対応";
   }
 
   // フォーカス
@@ -243,11 +380,11 @@ function setupControls() {
     focusSlider.step = step;
     focusSlider.value = settings.focusDistance || min;
     focusMode = "auto";
-    focusModeBtn.textContent = "フォーカス：AUTO";
+    focusModeBtn.textContent = "AUTO";
     focusRow.style.display = "none";
   } else {
     focusModeBtn.disabled = true;
-    focusModeBtn.textContent = "フォーカス：未対応";
+    focusModeBtn.textContent = "未対応";
   }
 
   applyExposureMode();
@@ -264,7 +401,7 @@ zoomSlider.addEventListener("input", () => {
 gridToggleBtn.addEventListener("click", () => {
   const show = gridOverlay.style.display !== "block";
   gridOverlay.style.display = show ? "block" : "none";
-  gridToggleBtn.textContent = show ? "グリッド OFF" : "グリッド ON";
+  gridToggleBtn.classList.toggle('active', show);
 });
 
 /* 露出 AUTO / MANUAL */
@@ -282,11 +419,13 @@ exposureModeBtn.addEventListener("click", () => {
   if (!exposureSupported) return;
   if (exposureMode === "auto") {
     exposureMode = "manual";
-    exposureModeBtn.textContent = "露出：MANUAL";
+    exposureModeBtn.textContent = "MANUAL";
+    exposureModeBtn.classList.add('active');
     exposureRow.style.display = "flex";
   } else {
     exposureMode = "auto";
-    exposureModeBtn.textContent = "露出：AUTO";
+    exposureModeBtn.textContent = "AUTO";
+    exposureModeBtn.classList.remove('active');
     exposureRow.style.display = "none";
   }
   applyExposureMode();
@@ -312,11 +451,13 @@ focusModeBtn.addEventListener("click", () => {
   if (!focusDistanceSupported) return;
   if (focusMode === "auto") {
     focusMode = "manual";
-    focusModeBtn.textContent = "フォーカス：MANUAL";
+    focusModeBtn.textContent = "MANUAL";
+    focusModeBtn.classList.add('active');
     focusRow.style.display = "flex";
   } else {
     focusMode = "auto";
-    focusModeBtn.textContent = "フォーカス：AUTO";
+    focusModeBtn.textContent = "AUTO";
+    focusModeBtn.classList.remove('active');
     focusRow.style.display = "none";
   }
   applyFocusMode();
@@ -370,7 +511,7 @@ recordBtn.addEventListener("click", () => {
   if (!recorder) {
     recorder = createRecorder();
     if (!recorder) {
-      statusEl.textContent = "MediaRecorder が利用できません";
+      statusEl.textContent = "録画不可";
       return;
     }
     recorder.ondataavailable = e => {
@@ -382,14 +523,12 @@ recordBtn.addEventListener("click", () => {
       autoSave(blob);
       statusEl.textContent = "保存完了";
       recordBtn.classList.remove("recording");
-      recordBtn.textContent = "録画開始";
     };
   }
 
   if (recorder.state === "inactive") {
     recorder.start();
     recordBtn.classList.add("recording");
-    recordBtn.textContent = "録画停止";
     statusEl.textContent = "録画中...";
   } else if (recorder.state === "recording") {
     recorder.stop();
