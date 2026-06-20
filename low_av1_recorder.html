@@ -445,3 +445,141 @@ function setupControls() {
   zoomSupported = !!capabilities.zoom;
   exposureSupported = !!capabilities.exposureCompensation;
   focusDistanceSupported = !!capabilities.focusDistance;
+
+  if (zoomSupported) {
+    zoomSlider.min = capabilities.zoom.min;
+    zoomSlider.max = capabilities.zoom.max;
+    zoomSlider.step = capabilities.zoom.step || 0.1;
+    zoomSlider.value = settings.zoom || capabilities.zoom.min;
+    zoomSlider.disabled = false;
+  } else {
+    zoomSlider.min = 1; zoomSlider.max = 1; zoomSlider.value = 1; zoomSlider.disabled = true;
+  }
+
+  if (exposureSupported) {
+    const min = capabilities.exposureCompensation.min;
+    const max = capabilities.exposureCompensation.max;
+    const step = capabilities.exposureCompensation.step || 1;
+    exposureSlider.min = min; exposureSlider.max = max; exposureSlider.step = step;
+    exposureSlider.value = settings.exposureCompensation || 0;
+    exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureRow.style.display = "none";
+  } else {
+    exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応";
+  }
+
+  if (focusDistanceSupported) {
+    const min = capabilities.focusDistance.min || 0;
+    const max = capabilities.focusDistance.max || 1;
+    const step = capabilities.focusDistance.step || 0.01;
+    focusSlider.min = min; focusSlider.max = max; focusSlider.step = step;
+    focusSlider.value = settings.focusDistance || min;
+    focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusRow.style.display = "none";
+  } else {
+    focusModeBtn.disabled = true; focusModeBtn.textContent = "未対応";
+  }
+  applyExposureMode();
+  applyFocusMode();
+}
+
+zoomSlider.addEventListener("input", () => {
+  if (!videoTrack || !zoomSupported) return;
+  videoTrack.applyConstraints({ advanced: [{ zoom: parseFloat(zoomSlider.value) }] }).catch(console.error);
+});
+gridToggleBtn.addEventListener("click", () => {
+  const show = gridOverlay.style.display !== "block";
+  gridOverlay.style.display = show ? "block" : "none";
+  gridToggleBtn.classList.toggle('active', show);
+});
+function applyExposureMode() {
+  if (!videoTrack || !exposureSupported) return;
+  if (exposureMode === "auto") videoTrack.applyConstraints({ advanced: [{ exposureMode: "continuous" }] }).catch(() => {});
+  else videoTrack.applyConstraints({ advanced: [{ exposureCompensation: parseFloat(exposureSlider.value) }] }).catch(console.error);
+}
+exposureModeBtn.addEventListener("click", () => {
+  if (!exposureSupported) return;
+  if (exposureMode === "auto") { exposureMode = "manual"; exposureModeBtn.textContent = "MANUAL"; exposureModeBtn.classList.add('active'); exposureRow.style.display = "flex"; } 
+  else { exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureModeBtn.classList.remove('active'); exposureRow.style.display = "none"; }
+  applyExposureMode();
+});
+exposureSlider.addEventListener("input", () => { if (exposureMode === "manual") applyExposureMode(); });
+
+function applyFocusMode() {
+  if (!videoTrack || !focusDistanceSupported) return;
+  if (focusMode === "auto") videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+  else videoTrack.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: parseFloat(focusSlider.value) }] }).catch(console.error);
+}
+focusModeBtn.addEventListener("click", () => {
+  if (!focusDistanceSupported) return;
+  if (focusMode === "auto") { focusMode = "manual"; focusModeBtn.textContent = "MANUAL"; focusModeBtn.classList.add('active'); focusRow.style.display = "flex"; } 
+  else { focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusModeBtn.classList.remove('active'); focusRow.style.display = "none"; }
+  applyFocusMode();
+});
+focusSlider.addEventListener("input", () => { if (focusMode === "manual") applyFocusMode(); });
+
+function createRecorder() {
+  const bps = parseInt(bitrateSelect.value, 10);
+  const optionsList = [
+    { mimeType: "video/webm;codecs=av1", videoBitsPerSecond: bps },
+    { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: bps },
+    { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: bps },
+    {}
+  ];
+  for (const opt of optionsList) {
+    try { return new MediaRecorder(stream, opt); } catch (e) { console.warn("Option failed:", opt); }
+  }
+  return null;
+}
+
+function autoSave(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const now = new Date();
+  const f = "video_" + now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2) + ("0"+now.getSeconds()).slice(-2) + ".webm";
+  a.href = url; a.download = f; a.click(); URL.revokeObjectURL(url);
+}
+
+function updateTimerDisplay() {
+  const now = Date.now();
+  const diff = Math.floor((now - recordingStartTime) / 1000);
+  const m = String(Math.floor(diff / 60)).padStart(2, "0");
+  const s = String(diff % 60).padStart(2, "0");
+  infoTime.textContent = `${m}:${s}`;
+}
+
+recordBtn.addEventListener("click", () => {
+  if (!recorder) {
+    recorder = createRecorder();
+    if (!recorder) { statusEl.textContent = "録画不可"; return; }
+    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: "video/webm" });
+      chunks = [];
+      autoSave(blob);
+      statusEl.textContent = "保存完了";
+      recordBtn.classList.remove("recording");
+      clearInterval(timerInterval);
+      infoTime.classList.remove("active");
+      infoTime.textContent = "00:00";
+    };
+  }
+
+  if (recorder.state === "inactive") {
+    recorder.start();
+    recordBtn.classList.add("recording");
+    statusEl.textContent = "録画中...";
+    recordingStartTime = Date.now();
+    infoTime.textContent = "00:00";
+    infoTime.classList.add("active");
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+  } else if (recorder.state === "recording") {
+    recorder.stop();
+    statusEl.textContent = "保存中...";
+  }
+});
+
+// --- 初期起動 ---
+loadSettings(); 
+startCamera();
+</script>
+</body>
+</html>
