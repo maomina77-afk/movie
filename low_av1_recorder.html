@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AV1 低容量動画撮影</title>
+<title>AV1 低容量動画＆写真撮影</title>
 <style>
   :root {
     --primary: #ff3b30;
@@ -28,7 +28,7 @@
     height: 100dvh; 
   }
 
-  /* --- 上部バー（縦持ち時） --- */
+  /* --- 上部バー --- */
   #topBar {
     flex: 0 0 auto;
     display: flex;
@@ -91,6 +91,36 @@
   .grid-h1 { top: 33.33%; left: 0; right: 0; height: 1px; }
   .grid-h2 { top: 66.66%; left: 0; right: 0; height: 1px; }
 
+  /* --- 新機能：水準器（レベルメーター） --- */
+  #levelerOverlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: none; /* 初期は非表示 */
+    z-index: 3;
+  }
+  #levelerTarget {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 60px; height: 60px;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.2s;
+  }
+  .leveler-line-h { position: absolute; top: 50%; left: calc(50% - 60px); width: 120px; height: 1px; background: rgba(255,255,255,0.4); transform: translateY(-50%); }
+  .leveler-line-v { position: absolute; left: 50%; top: calc(50% - 60px); width: 1px; height: 120px; background: rgba(255,255,255,0.4); transform: translateX(-50%); }
+  
+  #levelerIndicator {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 24px; height: 24px;
+    border: 3px solid #ff9500; /* 初期はオレンジ */
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: border-color 0.1s ease, box-shadow 0.1s ease;
+  }
+
   /* 設定パネル */
   #settingsPanel {
     position: absolute;
@@ -104,6 +134,8 @@
     display: none;
     z-index: 20;
     border: 1px solid rgba(255,255,255,0.1);
+    max-height: 90%;
+    overflow-y: auto;
   }
   #settingsPanel.show { display: block; }
   #settingsPanel label { display: block; font-size: 12px; margin-bottom: 4px; color: #ccc; }
@@ -111,7 +143,7 @@
   #estimateText { font-size: 12px; color: #88ff88; margin-bottom: 12px; text-align: center; }
   #applySettings { width: 100%; padding: 10px; background: #555; color: white; border: none; border-radius: 6px; font-weight: bold; }
 
-  /* --- 下部コントロール（縦持ち時） --- */
+  /* --- 下部コントロール --- */
   #bottomBar {
     flex: 0 0 auto;
     background: var(--bg-panel);
@@ -137,18 +169,10 @@
   
   input[type="range"] { width: 100%; height: 30px; margin: 0; }
 
-  .toggle-btn {
-    flex: 1;
-    background: #333;
-    color: white;
-    border: 1px solid #555;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 12px;
-  }
+  .toggle-btn { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 6px; font-size: 12px; }
   .toggle-btn.active { background: #555; border-color: #888; }
 
-  /* 録画ボタン・情報エリア */
+  /* 録画・写真ボタンエリア */
   #recordContainer {
     display: flex;
     align-items: center;
@@ -156,7 +180,8 @@
     padding: 0 4px;
   }
 
-  #leftStats, #rightSpace { flex: 1; }
+  #leftStats, #rightActions { flex: 1; }
+  
   #leftStats { display: flex; flex-direction: column; gap: 2px; }
   #infoText { font-size: 10px; color: #aaa; line-height: 1.3; }
   #infoTime { font-size: 18px; font-weight: bold; font-variant-numeric: tabular-nums; color: white; }
@@ -178,49 +203,36 @@
   #recordBtn:active { transform: scale(0.95); background: var(--primary-active); }
   #recordBtn.recording { background: #34c759; border-radius: 20px; transform: scale(0.8); }
 
-  /* =========================================
-     追加：スマホ横向き（ランドスケープ）時の専用レイアウト
-     ========================================= */
-  @media (orientation: landscape) {
-    body {
-      flex-direction: row; /* 全体を横並びに変更 */
-    }
-    
-    /* 左側のメニュー（元の上部バー） */
-    #topBar {
-      flex-direction: column; /* アイコンを縦に並べる */
-      width: 90px;
-      height: 100%;
-      padding: 16px 8px;
-      box-sizing: border-box;
-    }
-    
-    /* 設定パネルの位置調整（左側から出るようにする） */
-    #settingsPanel {
-      top: 16px;
-      left: 100px; 
-      right: auto;
-    }
-
-    /* 右側の操作パネル（元の下部バー） */
-    #bottomBar {
-      width: 340px;
-      height: 100%;
-      padding: 16px 24px;
-      box-sizing: border-box;
-      overflow-y: auto; /* 画面が狭いスマホ用にスクロール可能に */
-      justify-content: center; /* 縦方向の中央寄せ */
-    }
-
-    #recordContainer {
-      margin-top: 24px;
-    }
-    
-    #previewWrapper {
-      width: auto; /* 幅を自動調整 */
-    }
+  /* 新機能：写真ボタン */
+  #rightActions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
+  #snapBtn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #ccc;
+    color: #333;
+    font-size: 10px;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    transition: all 0.1s ease;
+    padding: 0;
+  }
+  #snapBtn:active { transform: scale(0.9); background: #eee; }
 
+  /* スマホ横向き（ランドスケープ）用 */
+  @media (orientation: landscape) {
+    body { flex-direction: row; }
+    #topBar { flex-direction: column; width: 90px; height: 100%; padding: 16px 8px; box-sizing: border-box; }
+    #settingsPanel { top: 16px; left: 100px; right: auto; }
+    #bottomBar { width: 340px; height: 100%; padding: 16px 24px; box-sizing: border-box; overflow-y: auto; justify-content: center; }
+    #recordContainer { margin-top: 24px; }
+    #previewWrapper { width: auto; }
+  }
 </style>
 </head>
 <body>
@@ -233,6 +245,7 @@
 
 <div id="previewWrapper">
   <video id="preview" autoplay playsinline muted></video>
+  
   <div id="gridOverlay">
     <div class="grid-line grid-v1"></div>
     <div class="grid-line grid-v2"></div>
@@ -240,15 +253,25 @@
     <div class="grid-line grid-h2"></div>
   </div>
 
+  <div id="levelerOverlay">
+    <div class="leveler-line-h"></div>
+    <div class="leveler-line-v"></div>
+    <div id="levelerTarget"></div>
+    <div id="levelerIndicator"></div>
+  </div>
+
   <div id="settingsPanel">
+    <label>水準器（水平・あおり）：</label>
+    <select id="levelerToggle">
+      <option value="off">OFF</option>
+      <option value="on">ON</option>
+    </select>
+
     <label>解像度（基準値）：</label>
     <select id="resolution">
-      <option value="720x540">720 × 540（標準）横</option>
-      <option value="540x720">540 × 720（標準）縦</option>
-      <option value="240x180">240 × 180（超低容量）横</option>
-      <option value="180x240">180 × 240（超低容量）縦</option>
-      <option value="1440x1080">1440 × 1080（高画質）横</option>
-      <option value="1080x1440">1080 × 1440（高画質）縦</option>
+      <option value="720x540">720 × 540（標準）</option>
+      <option value="240x180">240 × 180（超低容量）</option>
+      <option value="1440x1080">1440 × 1080（高画質）</option>
     </select>
 
     <label>FPS：</label>
@@ -256,7 +279,6 @@
       <option value="10">10 fps</option>
       <option value="15">15 fps</option>
       <option value="30">30 fps</option>
-      <option value="60">60 fps</option>
     </select>
 
     <label>ビットレート：</label>
@@ -314,7 +336,9 @@
     <div id="centerBtn">
       <button id="recordBtn">録画開始</button>
     </div>
-    <div id="rightSpace"></div>
+    <div id="rightActions">
+      <button id="snapBtn">写真</button>
+    </div>
   </div>
 </div>
 
@@ -325,9 +349,13 @@ const settingsPanel = document.getElementById('settingsPanel');
 const resSelect = document.getElementById("resolution");
 const fpsSelect = document.getElementById("fps");
 const bitrateSelect = document.getElementById("bitrate");
+const levelerToggle = document.getElementById("levelerToggle");
 const estimateText = document.getElementById("estimateText");
 const infoText = document.getElementById("infoText");
 const infoTime = document.getElementById("infoTime");
+const levelerOverlay = document.getElementById("levelerOverlay");
+
+let levelerActive = false;
 
 settingsToggleBtn.addEventListener('click', () => {
   settingsPanel.classList.toggle('show');
@@ -337,18 +365,27 @@ function loadSettings() {
   const sRes = localStorage.getItem("av1_res");
   const sFps = localStorage.getItem("av1_fps");
   const sBit = localStorage.getItem("av1_bitrate");
+  const sLev = localStorage.getItem("av1_leveler");
   
   if(sRes) resSelect.value = sRes; else resSelect.value = "720x540";
   if(sFps) fpsSelect.value = sFps; else fpsSelect.value = "10";
   if(sBit) bitrateSelect.value = sBit; else bitrateSelect.value = "250000";
+  if(sLev) levelerToggle.value = sLev; else levelerToggle.value = "off";
   
   updateDisplayData();
+  updateLevelerVisibility();
 }
 
 function saveSettings() {
   localStorage.setItem("av1_res", resSelect.value);
   localStorage.setItem("av1_fps", fpsSelect.value);
   localStorage.setItem("av1_bitrate", bitrateSelect.value);
+  localStorage.setItem("av1_leveler", levelerToggle.value);
+}
+
+function updateLevelerVisibility() {
+  levelerActive = (levelerToggle.value === "on");
+  levelerOverlay.style.display = levelerActive ? "block" : "none";
 }
 
 function updateDisplayData() {
@@ -360,7 +397,6 @@ function updateDisplayData() {
   const isPortrait = window.innerHeight > window.innerWidth;
   const res = resSelect.value.split("x");
   let displayRes = isPortrait ? `${res[1]}x${res[0]}` : `${res[0]}x${res[1]}`;
-
   const kbpsText = bps >= 1000000 ? (bps/1000000).toFixed(1) + 'M' : (bps/1000) + 'k';
   infoText.innerHTML = `${displayRes}<br>${fpsSelect.value}fps / ${kbpsText}bps`;
 }
@@ -368,6 +404,7 @@ function updateDisplayData() {
 resSelect.addEventListener("change", updateDisplayData);
 fpsSelect.addEventListener("change", updateDisplayData);
 bitrateSelect.addEventListener("change", updateDisplayData);
+levelerToggle.addEventListener("change", updateLevelerVisibility);
 
 document.getElementById("applySettings").addEventListener("click", () => {
   saveSettings();
@@ -395,6 +432,7 @@ const focusModeBtn = document.getElementById("focusModeBtn");
 const focusRow = document.getElementById("focusRow");
 const focusSlider = document.getElementById("focusSlider");
 const recordBtn = document.getElementById("recordBtn");
+const snapBtn = document.getElementById("snapBtn");
 
 async function startCamera() {
   if (stream) stream.getTracks().forEach(t => t.stop());
@@ -406,8 +444,7 @@ async function startCamera() {
   let idealW = baseW;
   let idealH = baseH;
   if (window.innerHeight > window.innerWidth) {
-    idealW = baseH;
-    idealH = baseW;
+    idealW = baseH; idealH = baseW;
   }
 
   const fps = parseInt(fpsSelect.value, 10);
@@ -439,9 +476,7 @@ let resizeTimer;
 window.addEventListener("resize", () => {
   if (!recorder || recorder.state === "inactive") {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      startCamera();
-    }, 500); 
+    resizeTimer = setTimeout(() => { startCamera(); }, 500); 
   }
 });
 
@@ -459,28 +494,20 @@ function setupControls() {
   } else {
     zoomSlider.min = 1; zoomSlider.max = 1; zoomSlider.value = 1; zoomSlider.disabled = true;
   }
-
+  // 露出
   if (exposureSupported) {
-    const min = capabilities.exposureCompensation.min;
-    const max = capabilities.exposureCompensation.max;
-    const step = capabilities.exposureCompensation.step || 1;
-    exposureSlider.min = min; exposureSlider.max = max; exposureSlider.step = step;
+    const min = capabilities.exposureCompensation.min; const max = capabilities.exposureCompensation.max;
+    exposureSlider.min = min; exposureSlider.max = max; exposureSlider.step = capabilities.exposureCompensation.step || 1;
     exposureSlider.value = settings.exposureCompensation || 0;
     exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureRow.style.display = "none";
-  } else {
-    exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応";
-  }
-
+  } else { exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応"; }
+  // フォーカス
   if (focusDistanceSupported) {
-    const min = capabilities.focusDistance.min || 0;
-    const max = capabilities.focusDistance.max || 1;
-    const step = capabilities.focusDistance.step || 0.01;
-    focusSlider.min = min; focusSlider.max = max; focusSlider.step = step;
+    const min = capabilities.focusDistance.min || 0; const max = capabilities.focusDistance.max || 1;
+    focusSlider.min = min; focusSlider.max = max; focusSlider.step = capabilities.focusDistance.step || 0.01;
     focusSlider.value = settings.focusDistance || min;
     focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusRow.style.display = "none";
-  } else {
-    focusModeBtn.disabled = true; focusModeBtn.textContent = "未対応";
-  }
+  } else { focusModeBtn.disabled = true; focusModeBtn.textContent = "未対応"; }
   applyExposureMode();
   applyFocusMode();
 }
@@ -520,6 +547,88 @@ focusModeBtn.addEventListener("click", () => {
 });
 focusSlider.addEventListener("input", () => { if (focusMode === "manual") applyFocusMode(); });
 
+/* --- 写真撮影処理（スナップショット） --- */
+snapBtn.addEventListener("click", () => {
+  if (!stream) return;
+  
+  // フラッシュエフェクト
+  const flash = document.createElement("div");
+  flash.style.position = "fixed"; flash.style.inset = "0"; flash.style.backgroundColor = "white";
+  flash.style.zIndex = "100"; flash.style.opacity = "1"; flash.style.transition = "opacity 0.2s ease-out";
+  document.body.appendChild(flash);
+  setTimeout(() => { flash.style.opacity = "0"; }, 50);
+  setTimeout(() => { flash.remove(); }, 250);
+
+  // キャンバスに映像を描画して保存
+  const canvas = document.createElement("canvas");
+  canvas.width = preview.videoWidth;
+  canvas.height = preview.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
+  
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.95); // JPGで保存
+  const a = document.createElement("a");
+  const now = new Date();
+  const f = "photo_" + now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2) + ("0"+now.getSeconds()).slice(-2) + ".jpg";
+  a.href = dataUrl; a.download = f; a.click();
+});
+
+/* --- 水準器 処理 --- */
+window.addEventListener("deviceorientation", (e) => {
+  if (!levelerActive) return;
+
+  const angle = (screen.orientation || {}).angle || window.orientation || 0;
+  let pitch, roll;
+  let b = e.beta;  // 前後
+  let g = e.gamma; // 左右
+
+  // 端末を寝かせているか（机に向けている）、立てているかの判定
+  const isFlat = Math.abs(b) < 45; 
+  
+  // 画面の向きと持ち方に合わせてXYZ軸を補正
+  if (angle === 90) { // 横持ち（左）
+      if (isFlat) { roll = -b; pitch = g; }
+      else { roll = g; pitch = b > 0 ? b - 90 : b + 90; }
+  } else if (angle === -90 || angle === 270) { // 横持ち（右）
+      if (isFlat) { roll = b; pitch = -g; }
+      else { roll = -g; pitch = b > 0 ? b - 90 : b + 90; }
+  } else { // 縦持ち
+      if (isFlat) { roll = g; pitch = b; }
+      else { roll = g; pitch = b > 0 ? b - 90 : b + 90; }
+  }
+
+  // 表示する円の移動制限（ピクセル）
+  const MAX_DEG = 20; 
+  let x = (roll / MAX_DEG) * 45;
+  let y = (pitch / MAX_DEG) * 45;
+  x = Math.max(-60, Math.min(60, x));
+  y = Math.max(-60, Math.min(60, y));
+
+  // 傾きの総合計から色を決定
+  const totalTilt = Math.sqrt(roll*roll + pitch*pitch);
+  let color = "#ff9500"; // オレンジ（大きく傾いている）
+  if (totalTilt < 1.5) color = "#34c759"; // 緑（ほぼ水平）
+  else if (totalTilt < 5) color = "#ffcc00"; // 黄色（少し傾いている）
+
+  // UIの更新
+  const ind = document.getElementById("levelerIndicator");
+  const target = document.getElementById("levelerTarget");
+  
+  ind.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+  ind.style.borderColor = color;
+  ind.style.boxShadow = `0 0 10px ${color}`;
+
+  // 水平になったらターゲット枠も緑に光らせる
+  if (totalTilt < 1.5) {
+      target.style.borderColor = "#34c759";
+      target.style.backgroundColor = "rgba(52, 199, 89, 0.2)";
+  } else {
+      target.style.borderColor = "rgba(255,255,255,0.5)";
+      target.style.backgroundColor = "transparent";
+  }
+});
+
+/* --- 録画処理 --- */
 function createRecorder() {
   const bps = parseInt(bitrateSelect.value, 10);
   const optionsList = [
@@ -564,6 +673,8 @@ recordBtn.addEventListener("click", () => {
       clearInterval(timerInterval);
       infoTime.classList.remove("active");
       infoTime.textContent = "00:00";
+      snapBtn.disabled = false; // 録画停止で写真ボタン復活
+      snapBtn.style.opacity = "1";
     };
   }
 
@@ -575,6 +686,9 @@ recordBtn.addEventListener("click", () => {
     infoTime.textContent = "00:00";
     infoTime.classList.add("active");
     timerInterval = setInterval(updateTimerDisplay, 1000);
+    // 録画中は写真撮影を無効化（MediaRecorderとCanvasの競合を防ぐため）
+    snapBtn.disabled = true;
+    snapBtn.style.opacity = "0.3";
   } else if (recorder.state === "recording") {
     recorder.stop();
     statusEl.textContent = "保存中...";
