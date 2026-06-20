@@ -28,7 +28,7 @@
     height: 100dvh; 
   }
 
-  /* --- 上部バー --- */
+  /* --- 上部バー（縦持ち時） --- */
   #topBar {
     flex: 0 0 auto;
     display: flex;
@@ -44,6 +44,7 @@
     background: rgba(255,255,255,0.1);
     padding: 4px 12px;
     border-radius: 12px;
+    text-align: center;
   }
 
   .icon-btn {
@@ -110,7 +111,7 @@
   #estimateText { font-size: 12px; color: #88ff88; margin-bottom: 12px; text-align: center; }
   #applySettings { width: 100%; padding: 10px; background: #555; color: white; border: none; border-radius: 6px; font-weight: bold; }
 
-  /* --- 下部コントロール --- */
+  /* --- 下部コントロール（縦持ち時） --- */
   #bottomBar {
     flex: 0 0 auto;
     background: var(--bg-panel);
@@ -155,35 +156,13 @@
     padding: 0 4px;
   }
 
-  #leftStats, #rightSpace {
-    flex: 1; 
-  }
-
-  #leftStats {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  #infoText {
-    font-size: 10px;
-    color: #aaa;
-    line-height: 1.3;
-  }
-
-  #infoTime {
-    font-size: 18px;
-    font-weight: bold;
-    font-variant-numeric: tabular-nums; 
-    color: white;
-  }
+  #leftStats, #rightSpace { flex: 1; }
+  #leftStats { display: flex; flex-direction: column; gap: 2px; }
+  #infoText { font-size: 10px; color: #aaa; line-height: 1.3; }
+  #infoTime { font-size: 18px; font-weight: bold; font-variant-numeric: tabular-nums; color: white; }
   #infoTime.active { color: var(--recording); }
 
-  #centerBtn {
-    flex: 0 0 auto;
-    display: flex;
-    justify-content: center;
-  }
+  #centerBtn { flex: 0 0 auto; display: flex; justify-content: center; }
 
   #recordBtn {
     width: 65px;
@@ -196,21 +175,59 @@
     transition: all 0.2s ease;
     text-indent: -9999px; 
   }
-  
   #recordBtn:active { transform: scale(0.95); background: var(--primary-active); }
-  
-  #recordBtn.recording {
-    background: #34c759; 
-    border-radius: 20px;
-    transform: scale(0.8);
+  #recordBtn.recording { background: #34c759; border-radius: 20px; transform: scale(0.8); }
+
+  /* =========================================
+     追加：スマホ横向き（ランドスケープ）時の専用レイアウト
+     ========================================= */
+  @media (orientation: landscape) {
+    body {
+      flex-direction: row; /* 全体を横並びに変更 */
+    }
+    
+    /* 左側のメニュー（元の上部バー） */
+    #topBar {
+      flex-direction: column; /* アイコンを縦に並べる */
+      width: 90px;
+      height: 100%;
+      padding: 16px 8px;
+      box-sizing: border-box;
+    }
+    
+    /* 設定パネルの位置調整（左側から出るようにする） */
+    #settingsPanel {
+      top: 16px;
+      left: 100px; 
+      right: auto;
+    }
+
+    /* 右側の操作パネル（元の下部バー） */
+    #bottomBar {
+      width: 340px;
+      height: 100%;
+      padding: 16px 24px;
+      box-sizing: border-box;
+      overflow-y: auto; /* 画面が狭いスマホ用にスクロール可能に */
+      justify-content: center; /* 縦方向の中央寄せ */
+    }
+
+    #recordContainer {
+      margin-top: 24px;
+    }
+    
+    #previewWrapper {
+      width: auto; /* 幅を自動調整 */
+    }
   }
+
 </style>
 </head>
 <body>
 
 <div id="topBar">
   <button id="gridToggleBtn" class="icon-btn">グリッド</button>
-  <div id="status">準備中...</div>
+  <div id="status">待機中</div>
   <button id="settingsToggleBtn" class="icon-btn">⚙️ 設定</button>
 </div>
 
@@ -336,7 +353,6 @@ function updateDisplayData() {
   const mb = (bytes / (1024 * 1024)).toFixed(1);
   estimateText.textContent = `目安: 10分で約 ${mb} MB`;
 
-  // 現在の画面の向きに合わせてテキストを更新
   const isPortrait = window.innerHeight > window.innerWidth;
   const res = resSelect.value.split("x");
   let displayRes = isPortrait ? `${res[1]}x${res[0]}` : `${res[0]}x${res[1]}`;
@@ -383,7 +399,6 @@ async function startCamera() {
   let baseW = parseInt(res[0], 10);
   let baseH = parseInt(res[1], 10);
 
-  // 【追加】画面の向き（縦横）を検知して、解像度の縦横をひっくり返す
   let idealW = baseW;
   let idealH = baseH;
   if (window.innerHeight > window.innerWidth) {
@@ -410,20 +425,19 @@ async function startCamera() {
     capabilities = videoTrack.getCapabilities();
     settings = videoTrack.getSettings();
     setupControls();
-    updateDisplayData(); // 回転直後の解像度表示を更新
+    updateDisplayData(); 
   } catch (e) {
-    statusEl.textContent = "カメラ取得失敗: " + e.message;
+    statusEl.textContent = "取得失敗";
   }
 }
 
-// 【追加】スマホを回転させたときにカメラを再起動する（録画中でない場合）
 let resizeTimer;
 window.addEventListener("resize", () => {
   if (!recorder || recorder.state === "inactive") {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       startCamera();
-    }, 500); // 回転が終わるまで少し待ってから再起動
+    }, 500); 
   }
 });
 
@@ -431,143 +445,3 @@ function setupControls() {
   zoomSupported = !!capabilities.zoom;
   exposureSupported = !!capabilities.exposureCompensation;
   focusDistanceSupported = !!capabilities.focusDistance;
-
-  if (zoomSupported) {
-    zoomSlider.min = capabilities.zoom.min;
-    zoomSlider.max = capabilities.zoom.max;
-    zoomSlider.step = capabilities.zoom.step || 0.1;
-    zoomSlider.value = settings.zoom || capabilities.zoom.min;
-    zoomSlider.disabled = false;
-  } else {
-    zoomSlider.min = 1; zoomSlider.max = 1; zoomSlider.value = 1; zoomSlider.disabled = true;
-  }
-
-  if (exposureSupported) {
-    const min = capabilities.exposureCompensation.min;
-    const max = capabilities.exposureCompensation.max;
-    const step = capabilities.exposureCompensation.step || 1;
-    exposureSlider.min = min; exposureSlider.max = max; exposureSlider.step = step;
-    exposureSlider.value = settings.exposureCompensation || 0;
-    exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureRow.style.display = "none";
-  } else {
-    exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応";
-  }
-
-  if (focusDistanceSupported) {
-    const min = capabilities.focusDistance.min || 0;
-    const max = capabilities.focusDistance.max || 1;
-    const step = capabilities.focusDistance.step || 0.01;
-    focusSlider.min = min; focusSlider.max = max; focusSlider.step = step;
-    focusSlider.value = settings.focusDistance || min;
-    focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusRow.style.display = "none";
-  } else {
-    focusModeBtn.disabled = true; focusModeBtn.textContent = "未対応";
-  }
-  applyExposureMode();
-  applyFocusMode();
-}
-
-/* カメラ制御イベント群 */
-zoomSlider.addEventListener("input", () => {
-  if (!videoTrack || !zoomSupported) return;
-  videoTrack.applyConstraints({ advanced: [{ zoom: parseFloat(zoomSlider.value) }] }).catch(console.error);
-});
-gridToggleBtn.addEventListener("click", () => {
-  const show = gridOverlay.style.display !== "block";
-  gridOverlay.style.display = show ? "block" : "none";
-  gridToggleBtn.classList.toggle('active', show);
-});
-function applyExposureMode() {
-  if (!videoTrack || !exposureSupported) return;
-  if (exposureMode === "auto") videoTrack.applyConstraints({ advanced: [{ exposureMode: "continuous" }] }).catch(() => {});
-  else videoTrack.applyConstraints({ advanced: [{ exposureCompensation: parseFloat(exposureSlider.value) }] }).catch(console.error);
-}
-exposureModeBtn.addEventListener("click", () => {
-  if (!exposureSupported) return;
-  if (exposureMode === "auto") { exposureMode = "manual"; exposureModeBtn.textContent = "MANUAL"; exposureModeBtn.classList.add('active'); exposureRow.style.display = "flex"; } 
-  else { exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureModeBtn.classList.remove('active'); exposureRow.style.display = "none"; }
-  applyExposureMode();
-});
-exposureSlider.addEventListener("input", () => { if (exposureMode === "manual") applyExposureMode(); });
-
-function applyFocusMode() {
-  if (!videoTrack || !focusDistanceSupported) return;
-  if (focusMode === "auto") videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
-  else videoTrack.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: parseFloat(focusSlider.value) }] }).catch(console.error);
-}
-focusModeBtn.addEventListener("click", () => {
-  if (!focusDistanceSupported) return;
-  if (focusMode === "auto") { focusMode = "manual"; focusModeBtn.textContent = "MANUAL"; focusModeBtn.classList.add('active'); focusRow.style.display = "flex"; } 
-  else { focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusModeBtn.classList.remove('active'); focusRow.style.display = "none"; }
-  applyFocusMode();
-});
-focusSlider.addEventListener("input", () => { if (focusMode === "manual") applyFocusMode(); });
-
-/* --- 録画処理 --- */
-function createRecorder() {
-  const bps = parseInt(bitrateSelect.value, 10);
-  const optionsList = [
-    { mimeType: "video/webm;codecs=av1", videoBitsPerSecond: bps },
-    { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: bps },
-    { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: bps },
-    {}
-  ];
-  for (const opt of optionsList) {
-    try { return new MediaRecorder(stream, opt); } catch (e) { console.warn("Option failed:", opt); }
-  }
-  return null;
-}
-
-function autoSave(blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const now = new Date();
-  const f = "video_" + now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2) + ("0"+now.getSeconds()).slice(-2) + ".webm";
-  a.href = url; a.download = f; a.click(); URL.revokeObjectURL(url);
-}
-
-function updateTimerDisplay() {
-  const now = Date.now();
-  const diff = Math.floor((now - recordingStartTime) / 1000);
-  const m = String(Math.floor(diff / 60)).padStart(2, "0");
-  const s = String(diff % 60).padStart(2, "0");
-  infoTime.textContent = `${m}:${s}`;
-}
-
-recordBtn.addEventListener("click", () => {
-  if (!recorder) {
-    recorder = createRecorder();
-    if (!recorder) { statusEl.textContent = "録画不可"; return; }
-    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: "video/webm" });
-      chunks = [];
-      autoSave(blob);
-      statusEl.textContent = "保存完了";
-      recordBtn.classList.remove("recording");
-      clearInterval(timerInterval);
-      infoTime.classList.remove("active");
-      infoTime.textContent = "00:00";
-    };
-  }
-
-  if (recorder.state === "inactive") {
-    recorder.start();
-    recordBtn.classList.add("recording");
-    statusEl.textContent = "録画中...";
-    recordingStartTime = Date.now();
-    infoTime.textContent = "00:00";
-    infoTime.classList.add("active");
-    timerInterval = setInterval(updateTimerDisplay, 1000);
-  } else if (recorder.state === "recording") {
-    recorder.stop();
-    statusEl.textContent = "保存中...";
-  }
-});
-
-// --- 初期起動 ---
-loadSettings(); 
-startCamera();
-</script>
-</body>
-</html>
