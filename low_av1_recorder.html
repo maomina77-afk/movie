@@ -8,7 +8,7 @@
   :root {
     --primary: #ff3b30;
     --primary-active: #ff6b63;
-    --recording: #ff3b30; /* 録画中の時間表示色（赤） */
+    --recording: #ff3b30;
     --bg-panel: #141414;
     --bg-overlay: rgba(30, 30, 30, 0.8);
     --text: #ffffff;
@@ -156,7 +156,7 @@
   }
 
   #leftStats, #rightSpace {
-    flex: 1; /* ボタンを中央に保つための均等な余白 */
+    flex: 1; 
   }
 
   #leftStats {
@@ -174,7 +174,7 @@
   #infoTime {
     font-size: 18px;
     font-weight: bold;
-    font-variant-numeric: tabular-nums; /* 数字の幅を固定してガタつきを防ぐ */
+    font-variant-numeric: tabular-nums; 
     color: white;
   }
   #infoTime.active { color: var(--recording); }
@@ -200,7 +200,7 @@
   #recordBtn:active { transform: scale(0.95); background: var(--primary-active); }
   
   #recordBtn.recording {
-    background: #34c759; /* 録画中は緑 */
+    background: #34c759; 
     border-radius: 20px;
     transform: scale(0.8);
   }
@@ -224,7 +224,7 @@
   </div>
 
   <div id="settingsPanel">
-    <label>解像度：</label>
+    <label>解像度（基準値）：</label>
     <select id="resolution">
       <option value="720x540">720 × 540（標準）</option>
       <option value="240x180">240 × 180（超低容量）</option>
@@ -293,7 +293,8 @@
     <div id="centerBtn">
       <button id="recordBtn">録画開始</button>
     </div>
-    <div id="rightSpace"></div> </div>
+    <div id="rightSpace"></div>
+  </div>
 </div>
 
 <script>
@@ -311,7 +312,6 @@ settingsToggleBtn.addEventListener('click', () => {
   settingsPanel.classList.toggle('show');
 });
 
-// 設定読み込み (起動時)
 function loadSettings() {
   const sRes = localStorage.getItem("av1_res");
   const sFps = localStorage.getItem("av1_fps");
@@ -324,28 +324,27 @@ function loadSettings() {
   updateDisplayData();
 }
 
-// 設定保存
 function saveSettings() {
   localStorage.setItem("av1_res", resSelect.value);
   localStorage.setItem("av1_fps", fpsSelect.value);
   localStorage.setItem("av1_bitrate", bitrateSelect.value);
 }
 
-// 画面のテキストと容量目安を更新
 function updateDisplayData() {
   const bps = parseInt(bitrateSelect.value, 10);
-  
-  // 10分(600秒)の容量計算: (ビットレート * 600秒) / 8(bit->Byte)
   const bytes = (bps * 600) / 8;
   const mb = (bytes / (1024 * 1024)).toFixed(1);
   estimateText.textContent = `目安: 10分で約 ${mb} MB`;
 
-  // 録画ボタン左のテキスト更新
+  // 現在の画面の向きに合わせてテキストを更新
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const res = resSelect.value.split("x");
+  let displayRes = isPortrait ? `${res[1]}x${res[0]}` : `${res[0]}x${res[1]}`;
+
   const kbpsText = bps >= 1000000 ? (bps/1000000).toFixed(1) + 'M' : (bps/1000) + 'k';
-  infoText.innerHTML = `${resSelect.value}<br>${fpsSelect.value}fps / ${kbpsText}bps`;
+  infoText.innerHTML = `${displayRes}<br>${fpsSelect.value}fps / ${kbpsText}bps`;
 }
 
-// 設定変更時にリアルタイムで目安を更新
 resSelect.addEventListener("change", updateDisplayData);
 fpsSelect.addEventListener("change", updateDisplayData);
 bitrateSelect.addEventListener("change", updateDisplayData);
@@ -379,17 +378,30 @@ const recordBtn = document.getElementById("recordBtn");
 
 async function startCamera() {
   if (stream) stream.getTracks().forEach(t => t.stop());
+  
   const res = resSelect.value.split("x");
+  let baseW = parseInt(res[0], 10);
+  let baseH = parseInt(res[1], 10);
+
+  // 【追加】画面の向き（縦横）を検知して、解像度の縦横をひっくり返す
+  let idealW = baseW;
+  let idealH = baseH;
+  if (window.innerHeight > window.innerWidth) {
+    idealW = baseH;
+    idealH = baseW;
+  }
+
   const fps = parseInt(fpsSelect.value, 10);
   const constraints = {
     audio: true,
     video: {
-      width: { ideal: parseInt(res[0], 10) },
-      height: { ideal: parseInt(res[1], 10) },
+      width: { ideal: idealW },
+      height: { ideal: idealH },
       frameRate: { ideal: fps },
       facingMode: "environment"
     }
   };
+  
   try {
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     preview.srcObject = stream;
@@ -398,10 +410,22 @@ async function startCamera() {
     capabilities = videoTrack.getCapabilities();
     settings = videoTrack.getSettings();
     setupControls();
+    updateDisplayData(); // 回転直後の解像度表示を更新
   } catch (e) {
     statusEl.textContent = "カメラ取得失敗: " + e.message;
   }
 }
+
+// 【追加】スマホを回転させたときにカメラを再起動する（録画中でない場合）
+let resizeTimer;
+window.addEventListener("resize", () => {
+  if (!recorder || recorder.state === "inactive") {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      startCamera();
+    }, 500); // 回転が終わるまで少し待ってから再起動
+  }
+});
 
 function setupControls() {
   zoomSupported = !!capabilities.zoom;
@@ -418,7 +442,6 @@ function setupControls() {
     zoomSlider.min = 1; zoomSlider.max = 1; zoomSlider.value = 1; zoomSlider.disabled = true;
   }
 
-  // 露出
   if (exposureSupported) {
     const min = capabilities.exposureCompensation.min;
     const max = capabilities.exposureCompensation.max;
@@ -430,7 +453,6 @@ function setupControls() {
     exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応";
   }
 
-  // フォーカス
   if (focusDistanceSupported) {
     const min = capabilities.focusDistance.min || 0;
     const max = capabilities.focusDistance.max || 1;
@@ -481,7 +503,6 @@ focusModeBtn.addEventListener("click", () => {
 });
 focusSlider.addEventListener("input", () => { if (focusMode === "manual") applyFocusMode(); });
 
-
 /* --- 録画処理 --- */
 function createRecorder() {
   const bps = parseInt(bitrateSelect.value, 10);
@@ -505,7 +526,6 @@ function autoSave(blob) {
   a.href = url; a.download = f; a.click(); URL.revokeObjectURL(url);
 }
 
-// 経過時間の更新処理
 function updateTimerDisplay() {
   const now = Date.now();
   const diff = Math.floor((now - recordingStartTime) / 1000);
@@ -525,7 +545,6 @@ recordBtn.addEventListener("click", () => {
       autoSave(blob);
       statusEl.textContent = "保存完了";
       recordBtn.classList.remove("recording");
-      // タイマー停止・リセット
       clearInterval(timerInterval);
       infoTime.classList.remove("active");
       infoTime.textContent = "00:00";
@@ -536,7 +555,6 @@ recordBtn.addEventListener("click", () => {
     recorder.start();
     recordBtn.classList.add("recording");
     statusEl.textContent = "録画中...";
-    // タイマー開始
     recordingStartTime = Date.now();
     infoTime.textContent = "00:00";
     infoTime.classList.add("active");
@@ -548,7 +566,7 @@ recordBtn.addEventListener("click", () => {
 });
 
 // --- 初期起動 ---
-loadSettings(); // 保存された設定を復元してテキストを更新
+loadSettings(); 
 startCamera();
 </script>
 </body>
