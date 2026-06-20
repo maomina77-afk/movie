@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>低容量動画撮影(AV1Codec)</title>
+<title>AV1 低容量動画撮影</title>
 <style>
   :root {
     --primary: #ff3b30;
     --primary-active: #ff6b63;
-    --recording: #34c759;
+    --recording: #ff3b30; /* 録画中の時間表示色（赤） */
     --bg-panel: #141414;
     --bg-overlay: rgba(30, 30, 30, 0.8);
     --text: #ffffff;
@@ -24,7 +24,6 @@
     touch-action: none;
     display: flex;
     flex-direction: column;
-    /* スマホのブラウザバーを考慮した全画面高さ */
     height: 100vh;
     height: 100dvh; 
   }
@@ -56,7 +55,7 @@
     font-size: 14px;
   }
 
-  /* --- プレビュー領域（上下のバーの間の空間をすべて埋める） --- */
+  /* --- プレビュー領域 --- */
   #previewWrapper {
     flex: 1 1 auto;
     position: relative;
@@ -71,11 +70,10 @@
   video {
     width: 100%;
     height: 100%;
-    /* プレビュー領域内で見切れないように最大化して中央配置 */
     object-fit: contain; 
   }
 
-  /* グリッド（プレビュー領域内のみに表示） */
+  /* グリッド */
   #gridOverlay {
     position: absolute;
     inset: 0;
@@ -92,7 +90,7 @@
   .grid-h1 { top: 33.33%; left: 0; right: 0; height: 1px; }
   .grid-h2 { top: 66.66%; left: 0; right: 0; height: 1px; }
 
-  /* 設定パネル (プレビュー領域の上に重ねる) */
+  /* 設定パネル */
   #settingsPanel {
     position: absolute;
     top: 8px;
@@ -101,21 +99,22 @@
     backdrop-filter: blur(8px);
     border-radius: 12px;
     padding: 16px;
-    width: 240px;
+    width: 260px;
     display: none;
     z-index: 20;
     border: 1px solid rgba(255,255,255,0.1);
   }
   #settingsPanel.show { display: block; }
   #settingsPanel label { display: block; font-size: 12px; margin-bottom: 4px; color: #ccc; }
-  #settingsPanel select { width: 100%; margin-bottom: 12px; padding: 8px; border-radius: 6px; background: #333; color: white; border: none; }
+  #settingsPanel select { width: 100%; margin-bottom: 12px; padding: 8px; border-radius: 6px; background: #333; color: white; border: none; font-size: 14px;}
+  #estimateText { font-size: 12px; color: #88ff88; margin-bottom: 12px; text-align: center; }
   #applySettings { width: 100%; padding: 10px; background: #555; color: white; border: none; border-radius: 6px; font-weight: bold; }
 
   /* --- 下部コントロール --- */
   #bottomBar {
     flex: 0 0 auto;
     background: var(--bg-panel);
-    padding: 16px 16px 32px 16px; /* 下部はスワイプ領域を考慮して広め */
+    padding: 16px 16px 32px 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -131,19 +130,11 @@
     gap: 12px;
   }
 
-  .row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+  .row { display: flex; align-items: center; gap: 12px; }
   .row-label { width: 60px; font-size: 12px; text-align: right; color: #aaa; }
   .row-control { flex: 1; display: flex; align-items: center; gap: 8px; }
   
-  input[type="range"] {
-    width: 100%;
-    height: 30px;
-    margin: 0;
-  }
+  input[type="range"] { width: 100%; height: 30px; margin: 0; }
 
   .toggle-btn {
     flex: 1;
@@ -156,12 +147,42 @@
   }
   .toggle-btn.active { background: #555; border-color: #888; }
 
-  /* 録画ボタンエリア */
+  /* 録画ボタン・情報エリア */
   #recordContainer {
     display: flex;
-    justify-content: center;
     align-items: center;
     margin-top: 8px;
+    padding: 0 4px;
+  }
+
+  #leftStats, #rightSpace {
+    flex: 1; /* ボタンを中央に保つための均等な余白 */
+  }
+
+  #leftStats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  #infoText {
+    font-size: 10px;
+    color: #aaa;
+    line-height: 1.3;
+  }
+
+  #infoTime {
+    font-size: 18px;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums; /* 数字の幅を固定してガタつきを防ぐ */
+    color: white;
+  }
+  #infoTime.active { color: var(--recording); }
+
+  #centerBtn {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
   }
 
   #recordBtn {
@@ -173,13 +194,13 @@
     outline: 2px solid transparent;
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     transition: all 0.2s ease;
-    text-indent: -9999px; /* 文字を隠す */
+    text-indent: -9999px; 
   }
   
   #recordBtn:active { transform: scale(0.95); background: var(--primary-active); }
   
   #recordBtn.recording {
-    background: var(--recording);
+    background: #34c759; /* 録画中は緑 */
     border-radius: 20px;
     transform: scale(0.8);
   }
@@ -205,16 +226,27 @@
   <div id="settingsPanel">
     <label>解像度：</label>
     <select id="resolution">
-      <option value="480x640" selected>480 × 640（標準）</option>
-      <option value="135x180">135 × 180（超低容量）</option>
-      <option value="960x1280">960 × 1280（高画質）</option>
+      <option value="720x540">720 × 540（標準）</option>
+      <option value="240x180">240 × 180（超低容量）</option>
+      <option value="1440x1080">1440 × 1080（高画質）</option>
     </select>
+
     <label>FPS：</label>
     <select id="fps">
-      <option value="10" selected>10 fps</option>
+      <option value="10">10 fps</option>
       <option value="15">15 fps</option>
       <option value="30">30 fps</option>
     </select>
+
+    <label>ビットレート：</label>
+    <select id="bitrate">
+      <option value="250000">250 kbps（標準）</option>
+      <option value="500000">500 kbps</option>
+      <option value="1000000">1000 kbps</option>
+      <option value="2500000">2500 kbps</option>
+    </select>
+
+    <div id="estimateText">目安: 10分で約 -- MB</div>
     <button id="applySettings">適用（再起動）</button>
   </div>
 </div>
@@ -227,7 +259,6 @@
         <input id="zoomSlider" type="range" min="1" max="1" step="0.01" value="1">
       </div>
     </div>
-
     <div class="row">
       <div class="row-label">露出</div>
       <div class="row-control">
@@ -240,7 +271,6 @@
         <input id="exposureSlider" type="range" min="0" max="0" step="1" value="0">
       </div>
     </div>
-
     <div class="row">
       <div class="row-label">フォーカス</div>
       <div class="row-control">
@@ -256,30 +286,83 @@
   </div>
 
   <div id="recordContainer">
-    <button id="recordBtn">録画開始</button>
-  </div>
+    <div id="leftStats">
+      <div id="infoText">--<br>-- / --</div>
+      <div id="infoTime">00:00</div>
+    </div>
+    <div id="centerBtn">
+      <button id="recordBtn">録画開始</button>
+    </div>
+    <div id="rightSpace"></div> </div>
 </div>
 
 <script>
-// --- UI制御 ---
+// --- UI制御・設定の保存 ---
 const settingsToggleBtn = document.getElementById('settingsToggleBtn');
 const settingsPanel = document.getElementById('settingsPanel');
+const resSelect = document.getElementById("resolution");
+const fpsSelect = document.getElementById("fps");
+const bitrateSelect = document.getElementById("bitrate");
+const estimateText = document.getElementById("estimateText");
+const infoText = document.getElementById("infoText");
+const infoTime = document.getElementById("infoTime");
 
 settingsToggleBtn.addEventListener('click', () => {
   settingsPanel.classList.toggle('show');
 });
 
-document.getElementById("applySettings").addEventListener("click", () => {
-  settingsPanel.classList.remove('show');
-  startCamera(); // 設定適用ボタンでカメラを再起動
-});
+// 設定読み込み (起動時)
+function loadSettings() {
+  const sRes = localStorage.getItem("av1_res");
+  const sFps = localStorage.getItem("av1_fps");
+  const sBit = localStorage.getItem("av1_bitrate");
+  
+  if(sRes) resSelect.value = sRes; else resSelect.value = "720x540";
+  if(sFps) fpsSelect.value = sFps; else fpsSelect.value = "10";
+  if(sBit) bitrateSelect.value = sBit; else bitrateSelect.value = "250000";
+  
+  updateDisplayData();
+}
 
+// 設定保存
+function saveSettings() {
+  localStorage.setItem("av1_res", resSelect.value);
+  localStorage.setItem("av1_fps", fpsSelect.value);
+  localStorage.setItem("av1_bitrate", bitrateSelect.value);
+}
+
+// 画面のテキストと容量目安を更新
+function updateDisplayData() {
+  const bps = parseInt(bitrateSelect.value, 10);
+  
+  // 10分(600秒)の容量計算: (ビットレート * 600秒) / 8(bit->Byte)
+  const bytes = (bps * 600) / 8;
+  const mb = (bytes / (1024 * 1024)).toFixed(1);
+  estimateText.textContent = `目安: 10分で約 ${mb} MB`;
+
+  // 録画ボタン左のテキスト更新
+  const kbpsText = bps >= 1000000 ? (bps/1000000).toFixed(1) + 'M' : (bps/1000) + 'k';
+  infoText.innerHTML = `${resSelect.value}<br>${fpsSelect.value}fps / ${kbpsText}bps`;
+}
+
+// 設定変更時にリアルタイムで目安を更新
+resSelect.addEventListener("change", updateDisplayData);
+fpsSelect.addEventListener("change", updateDisplayData);
+bitrateSelect.addEventListener("change", updateDisplayData);
+
+document.getElementById("applySettings").addEventListener("click", () => {
+  saveSettings();
+  settingsPanel.classList.remove('show');
+  startCamera(); 
+});
 
 // --- カメラ・録画制御 ---
 let stream, recorder, chunks = [];
 let videoTrack, capabilities, settings;
 let zoomSupported, exposureSupported, focusDistanceSupported;
 let exposureMode = "auto", focusMode = "auto";
+let timerInterval = null;
+let recordingStartTime = 0;
 
 const preview = document.getElementById("preview");
 const statusEl = document.getElementById("status");
@@ -296,8 +379,8 @@ const recordBtn = document.getElementById("recordBtn");
 
 async function startCamera() {
   if (stream) stream.getTracks().forEach(t => t.stop());
-  const res = document.getElementById("resolution").value.split("x");
-  const fps = parseInt(document.getElementById("fps").value, 10);
+  const res = resSelect.value.split("x");
+  const fps = parseInt(fpsSelect.value, 10);
   const constraints = {
     audio: true,
     video: {
@@ -332,10 +415,7 @@ function setupControls() {
     zoomSlider.value = settings.zoom || capabilities.zoom.min;
     zoomSlider.disabled = false;
   } else {
-    zoomSlider.min = 1;
-    zoomSlider.max = 1;
-    zoomSlider.value = 1;
-    zoomSlider.disabled = true;
+    zoomSlider.min = 1; zoomSlider.max = 1; zoomSlider.value = 1; zoomSlider.disabled = true;
   }
 
   // 露出
@@ -343,16 +423,11 @@ function setupControls() {
     const min = capabilities.exposureCompensation.min;
     const max = capabilities.exposureCompensation.max;
     const step = capabilities.exposureCompensation.step || 1;
-    exposureSlider.min = min;
-    exposureSlider.max = max;
-    exposureSlider.step = step;
+    exposureSlider.min = min; exposureSlider.max = max; exposureSlider.step = step;
     exposureSlider.value = settings.exposureCompensation || 0;
-    exposureMode = "auto";
-    exposureModeBtn.textContent = "AUTO";
-    exposureRow.style.display = "none";
+    exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureRow.style.display = "none";
   } else {
-    exposureModeBtn.disabled = true;
-    exposureModeBtn.textContent = "未対応";
+    exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応";
   }
 
   // フォーカス
@@ -360,114 +435,64 @@ function setupControls() {
     const min = capabilities.focusDistance.min || 0;
     const max = capabilities.focusDistance.max || 1;
     const step = capabilities.focusDistance.step || 0.01;
-    focusSlider.min = min;
-    focusSlider.max = max;
-    focusSlider.step = step;
+    focusSlider.min = min; focusSlider.max = max; focusSlider.step = step;
     focusSlider.value = settings.focusDistance || min;
-    focusMode = "auto";
-    focusModeBtn.textContent = "AUTO";
-    focusRow.style.display = "none";
+    focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusRow.style.display = "none";
   } else {
-    focusModeBtn.disabled = true;
-    focusModeBtn.textContent = "未対応";
+    focusModeBtn.disabled = true; focusModeBtn.textContent = "未対応";
   }
-
   applyExposureMode();
   applyFocusMode();
 }
 
-/* カメラ制御 */
+/* カメラ制御イベント群 */
 zoomSlider.addEventListener("input", () => {
   if (!videoTrack || !zoomSupported) return;
-  const z = parseFloat(zoomSlider.value);
-  videoTrack.applyConstraints({ advanced: [{ zoom: z }] }).catch(console.error);
+  videoTrack.applyConstraints({ advanced: [{ zoom: parseFloat(zoomSlider.value) }] }).catch(console.error);
 });
-
 gridToggleBtn.addEventListener("click", () => {
   const show = gridOverlay.style.display !== "block";
   gridOverlay.style.display = show ? "block" : "none";
   gridToggleBtn.classList.toggle('active', show);
 });
-
-/* 露出 AUTO / MANUAL */
 function applyExposureMode() {
   if (!videoTrack || !exposureSupported) return;
-  if (exposureMode === "auto") {
-    videoTrack.applyConstraints({ advanced: [{ exposureMode: "continuous" }] }).catch(() => {});
-  } else {
-    const v = parseFloat(exposureSlider.value);
-    videoTrack.applyConstraints({ advanced: [{ exposureCompensation: v }] }).catch(console.error);
-  }
+  if (exposureMode === "auto") videoTrack.applyConstraints({ advanced: [{ exposureMode: "continuous" }] }).catch(() => {});
+  else videoTrack.applyConstraints({ advanced: [{ exposureCompensation: parseFloat(exposureSlider.value) }] }).catch(console.error);
 }
-
 exposureModeBtn.addEventListener("click", () => {
   if (!exposureSupported) return;
-  if (exposureMode === "auto") {
-    exposureMode = "manual";
-    exposureModeBtn.textContent = "MANUAL";
-    exposureModeBtn.classList.add('active');
-    exposureRow.style.display = "flex";
-  } else {
-    exposureMode = "auto";
-    exposureModeBtn.textContent = "AUTO";
-    exposureModeBtn.classList.remove('active');
-    exposureRow.style.display = "none";
-  }
+  if (exposureMode === "auto") { exposureMode = "manual"; exposureModeBtn.textContent = "MANUAL"; exposureModeBtn.classList.add('active'); exposureRow.style.display = "flex"; } 
+  else { exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureModeBtn.classList.remove('active'); exposureRow.style.display = "none"; }
   applyExposureMode();
 });
+exposureSlider.addEventListener("input", () => { if (exposureMode === "manual") applyExposureMode(); });
 
-exposureSlider.addEventListener("input", () => {
-  if (exposureMode !== "manual") return;
-  applyExposureMode();
-});
-
-/* フォーカス AUTO / MANUAL */
 function applyFocusMode() {
   if (!videoTrack || !focusDistanceSupported) return;
-  if (focusMode === "auto") {
-    videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
-  } else {
-    const d = parseFloat(focusSlider.value);
-    videoTrack.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: d }] }).catch(console.error);
-  }
+  if (focusMode === "auto") videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+  else videoTrack.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: parseFloat(focusSlider.value) }] }).catch(console.error);
 }
-
 focusModeBtn.addEventListener("click", () => {
   if (!focusDistanceSupported) return;
-  if (focusMode === "auto") {
-    focusMode = "manual";
-    focusModeBtn.textContent = "MANUAL";
-    focusModeBtn.classList.add('active');
-    focusRow.style.display = "flex";
-  } else {
-    focusMode = "auto";
-    focusModeBtn.textContent = "AUTO";
-    focusModeBtn.classList.remove('active');
-    focusRow.style.display = "none";
-  }
+  if (focusMode === "auto") { focusMode = "manual"; focusModeBtn.textContent = "MANUAL"; focusModeBtn.classList.add('active'); focusRow.style.display = "flex"; } 
+  else { focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusModeBtn.classList.remove('active'); focusRow.style.display = "none"; }
   applyFocusMode();
 });
+focusSlider.addEventListener("input", () => { if (focusMode === "manual") applyFocusMode(); });
 
-focusSlider.addEventListener("input", () => {
-  if (focusMode !== "manual") return;
-  applyFocusMode();
-});
 
-/* 録画処理 */
+/* --- 録画処理 --- */
 function createRecorder() {
+  const bps = parseInt(bitrateSelect.value, 10);
   const optionsList = [
-    { mimeType: "video/webm;codecs=av1", videoBitsPerSecond: 250000 },
-    { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: 250000 },
-    { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: 250000 },
+    { mimeType: "video/webm;codecs=av1", videoBitsPerSecond: bps },
+    { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: bps },
+    { mimeType: "video/webm;codecs=vp8", videoBitsPerSecond: bps },
     {}
   ];
   for (const opt of optionsList) {
-    try {
-      const r = new MediaRecorder(stream, opt);
-      return r;
-    } catch (e) {
-      console.warn("MediaRecorder option failed:", opt, e);
-    }
+    try { return new MediaRecorder(stream, opt); } catch (e) { console.warn("Option failed:", opt); }
   }
   return null;
 }
@@ -476,37 +501,34 @@ function autoSave(blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   const now = new Date();
-  const fileName =
-    "video_" +
-    now.getFullYear() +
-    ("0" + (now.getMonth() + 1)).slice(-2) +
-    ("0" + now.getDate()).slice(-2) + "_" +
-    ("0" + now.getHours()).slice(-2) +
-    ("0" + now.getMinutes()).slice(-2) +
-    ("0" + now.getSeconds()).slice(-2) +
-    ".webm";
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
+  const f = "video_" + now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2) + ("0"+now.getSeconds()).slice(-2) + ".webm";
+  a.href = url; a.download = f; a.click(); URL.revokeObjectURL(url);
+}
+
+// 経過時間の更新処理
+function updateTimerDisplay() {
+  const now = Date.now();
+  const diff = Math.floor((now - recordingStartTime) / 1000);
+  const m = String(Math.floor(diff / 60)).padStart(2, "0");
+  const s = String(diff % 60).padStart(2, "0");
+  infoTime.textContent = `${m}:${s}`;
 }
 
 recordBtn.addEventListener("click", () => {
   if (!recorder) {
     recorder = createRecorder();
-    if (!recorder) {
-      statusEl.textContent = "録画不可";
-      return;
-    }
-    recorder.ondataavailable = e => {
-      if (e.data && e.data.size > 0) chunks.push(e.data);
-    };
+    if (!recorder) { statusEl.textContent = "録画不可"; return; }
+    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: "video/webm" });
       chunks = [];
       autoSave(blob);
       statusEl.textContent = "保存完了";
       recordBtn.classList.remove("recording");
+      // タイマー停止・リセット
+      clearInterval(timerInterval);
+      infoTime.classList.remove("active");
+      infoTime.textContent = "00:00";
     };
   }
 
@@ -514,13 +536,19 @@ recordBtn.addEventListener("click", () => {
     recorder.start();
     recordBtn.classList.add("recording");
     statusEl.textContent = "録画中...";
+    // タイマー開始
+    recordingStartTime = Date.now();
+    infoTime.textContent = "00:00";
+    infoTime.classList.add("active");
+    timerInterval = setInterval(updateTimerDisplay, 1000);
   } else if (recorder.state === "recording") {
     recorder.stop();
     statusEl.textContent = "保存中...";
   }
 });
 
-// 初期起動
+// --- 初期起動 ---
+loadSettings(); // 保存された設定を復元してテキストを更新
 startCamera();
 </script>
 </body>
