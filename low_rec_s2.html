@@ -636,24 +636,30 @@ snapBtn.addEventListener("click", () => {
   a.href = dataUrl; a.download = f; a.click();
 });
 
-/* --- 水準器 処理（iPhone風＋左端あおり） --- */
+// --- 水準器 処理（iPhone風＋左端あおり） ---
 window.addEventListener("deviceorientation", (e) => {
   if (!levelerActive) return;
 
   const angle = (screen.orientation || {}).angle || window.orientation || 0;
-  let b = e.beta;  
-  let g = e.gamma; 
+  let b = e.beta;  // 前後
+  let g = e.gamma; // 左右
   if (b === null || g === null) return;
 
-  // 縦持ち（Portrait）を基準に計算
-  let roll = g;
-  let pitch = b - 90; // 完全に立てた状態(90度)を0とする
+  let roll, pitch;
 
-  // 横向き時の補正
+  // 縦持ち基準の計算
   if (angle === 90) { 
-      roll = b; pitch = -g;
+      // 横持ち（右側を下にした状態）
+      roll = b; 
+      pitch = g; // ここを修正：横持ち時は gamma があおりになります
   } else if (angle === -90 || angle === 270) { 
-      roll = -b; pitch = g;
+      // 横持ち（左側を下にした状態）
+      roll = -b; 
+      pitch = -g;
+  } else {
+      // 縦持ち
+      roll = g;
+      pitch = b - 90; // 垂直(90)を0とする
   }
 
   // UIの取得
@@ -662,15 +668,15 @@ window.addEventListener("deviceorientation", (e) => {
   const pitchMoving = document.getElementById("pitchMoving");
   const pitchCenterMark = document.getElementById("pitchCenterMark");
 
-  // 【1】ローリング（左右）の回転反映
+  // 【1】ローリングの反映
   rollMoving.style.transform = `translate(-50%, -50%) rotate(${-roll}deg)`;
 
-  // 【2】ピッチング（前後）の移動反映
-  // 傾きの最大表示幅を制限（±45度までを、ゲージの±90pxの移動に割り当て）
+  // 【2】ピッチング（あおり）の反映
+  // 修正：水平を0とするため、そのままの値を反映させる（縦持ちの補正を除去）
   let pitchY = Math.max(-90, Math.min(90, pitch * 2));
   pitchMoving.style.transform = `translateY(calc(-50% + ${pitchY}px))`;
 
-  // 【3】色の判定と反映
+  // 【3】色の判定（水平・垂直ともに±1.5度以内なら緑）
   const isRollLevel = Math.abs(roll) < 1.5;
   const isPitchLevel = Math.abs(pitch) < 1.5;
   const colorGreen = "#34c759";
@@ -683,7 +689,6 @@ window.addEventListener("deviceorientation", (e) => {
   pitchMoving.style.backgroundColor = isPitchLevel ? colorGreen : colorWhite;
   pitchCenterMark.style.backgroundColor = isPitchLevel ? colorGreen : colorFaded;
 });
-
 /* --- 録画処理 --- */
 function createRecorder() {
   const bps = parseInt(bitrateSelect.value, 10);
