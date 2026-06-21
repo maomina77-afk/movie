@@ -223,11 +223,11 @@
 
 <div id="topBar">
   <div class="top-btn-group">
-    <button id="gridToggleBtn" class="icon-btn">グリッド</button>
+    <button id="gridToggleBtn" class="icon-btn">Glid</button>
     <button id="switchCameraBtn" class="icon-btn">🔄 切替</button>
   </div>
   <div id="status">待機中</div>
-  <button id="settingsToggleBtn" class="icon-btn">⚙️ 設定</button>
+  <button id="settingsToggleBtn" class="icon-btn">⚙ 設定</button>
 </div>
 
 <div id="previewWrapper">
@@ -262,24 +262,30 @@
 
     <label>解像度（基準値）：</label>
     <select id="resolution">
-      <option value="720x540">720 × 540（標準）</option>
+      <option value="720x540">720 × 540（低容量）</option>
+      <option value="540x720">540 × 720（低容量）</option>
       <option value="240x180">240 × 180（超低容量）</option>
+      <option value="180x240">180 × 240（超低容量）</option>
       <option value="1440x1080">1440 × 1080（高画質）</option>
+      <option value="1080x1440">1080 × 1440（高画質）</option>
+      <option value="1920x1440">1920 × 1440（高画質）</option>
+      <option value="1440x1920">1440 × 1920（高画質）</option>
     </select>
 
     <label>FPS：</label>
     <select id="fps">
-      <option value="10">10 fps</option>
-      <option value="15">15 fps</option>
-      <option value="30">30 fps</option>
+      <option value="10">10 fps（超低容量）</option>
+      <option value="15">15 fps（低容量）</option>
+      <option value="30">30 fps（高画質）</option>
+      <option value="60">60 fps（高画質）</option>
     </select>
 
     <label>ビットレート：</label>
     <select id="bitrate">
-      <option value="250000">250 kbps（標準）</option>
-      <option value="500000">500 kbps</option>
-      <option value="1000000">1000 kbps</option>
-      <option value="2500000">2500 kbps</option>
+      <option value="250000">250 kbps（超低容量）</option>
+      <option value="500000">500 kbps（低容量）</option>
+      <option value="1000000">1000 kbps（高画質）</option>
+      <option value="2500000">2500 kbps（高画質）</option>
     </select>
 
     <div id="estimateText">目安: 10分で約 -- MB</div>
