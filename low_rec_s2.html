@@ -651,11 +651,11 @@ window.addEventListener("deviceorientation", (e) => {
   if (angle === 90) { 
       // 横持ち（右側を下にした状態）
       roll = b; 
-      pitch = g; // ここを修正：横持ち時は gamma があおりになります
+      pitch = g - 90; // ここを修正：横持ち時は gamma があおりになります
   } else if (angle === -90 || angle === 270) { 
       // 横持ち（左側を下にした状態）
       roll = -b; 
-      pitch = -g;
+      pitch = -g - 90;
   } else {
       // 縦持ち
       roll = g;
