@@ -39,6 +39,12 @@
     z-index: 10;
   }
 
+  /* 上部左側のボタングループ（グリッド＆切替） */
+  .top-btn-group {
+    display: flex;
+    gap: 8px;
+  }
+
   #status {
     font-size: 14px;
     background: rgba(255,255,255,0.1);
@@ -72,6 +78,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain; 
+    transition: transform 0.3s ease; /* 反転時のアニメーション */
   }
 
   /* グリッド */
@@ -91,29 +98,23 @@
   .grid-h1 { top: 33.33%; left: 0; right: 0; height: 1px; }
   .grid-h2 { top: 66.66%; left: 0; right: 0; height: 1px; }
 
-  /* --- 改良版：水準器（iPhone風 ＆ 左端あおりゲージ） --- */
+  /* --- 水準器（iPhone風 ＆ 左端あおりゲージ） --- */
   #levelerOverlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    display: none; /* 初期は非表示 */
+    display: none; 
     z-index: 3;
   }
-
-  /* 1. 中央のローリング（左右傾き）UI */
   #levelerRollContainer {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 140px;
-    height: 2px;
+    top: 50%; left: 50%;
+    width: 140px; height: 2px;
     transform: translate(-50%, -50%);
   }
   .roll-fixed {
-    position: absolute;
-    top: 0;
-    width: 25px;
-    height: 2px;
+    position: absolute; top: 0;
+    width: 25px; height: 2px;
     background: rgba(255,255,255,0.5);
     transition: background-color 0.2s ease;
   }
@@ -121,51 +122,33 @@
   .roll-fixed.right { right: 0; }
   
   #rollMoving {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 70px;
-    height: 2px;
+    position: absolute; top: 50%; left: 50%;
+    width: 70px; height: 2px;
     background: white;
     transform: translate(-50%, -50%);
     box-shadow: 0 0 4px rgba(0,0,0,0.8);
     transition: background-color 0.2s ease;
   }
-
-  /* 2. 左端のピッチング（前後のあおり）UI */
   #levelerPitchContainer {
-    position: absolute;
-    top: 50%;
-    left: 16px; /* 左端からの距離 */
-    width: 20px;
-    height: 200px;
+    position: absolute; top: 50%; left: 16px; 
+    width: 20px; height: 200px;
     transform: translateY(-50%);
   }
   .pitch-track {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 1px;
-    background: rgba(255,255,255,0.3);
+    position: absolute; top: 0; bottom: 0; left: 50%;
+    width: 1px; background: rgba(255,255,255,0.3);
     transform: translateX(-50%);
   }
   #pitchCenterMark {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 2px;
+    position: absolute; top: 50%; left: 0;
+    width: 100%; height: 2px;
     background: rgba(255,255,255,0.5);
     transform: translateY(-50%);
     transition: background-color 0.2s ease;
   }
   #pitchMoving {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 2px;
+    position: absolute; top: 50%; left: 0;
+    width: 100%; height: 2px;
     background: white;
     box-shadow: 0 0 4px rgba(0,0,0,0.8);
     transition: background-color 0.2s ease;
@@ -173,19 +156,12 @@
 
   /* 設定パネル */
   #settingsPanel {
-    position: absolute;
-    top: 8px;
-    right: 16px;
-    background: var(--bg-overlay);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    padding: 16px;
-    width: 260px;
-    display: none;
-    z-index: 20;
+    position: absolute; top: 8px; right: 16px;
+    background: var(--bg-overlay); backdrop-filter: blur(8px);
+    border-radius: 12px; padding: 16px;
+    width: 260px; display: none; z-index: 20;
     border: 1px solid rgba(255,255,255,0.1);
-    max-height: 90%;
-    overflow-y: auto;
+    max-height: 90%; overflow-y: auto;
   }
   #settingsPanel.show { display: block; }
   #settingsPanel label { display: block; font-size: 12px; margin-bottom: 4px; color: #ccc; }
@@ -195,82 +171,39 @@
 
   /* --- 下部コントロール --- */
   #bottomBar {
-    flex: 0 0 auto;
-    background: var(--bg-panel);
-    padding: 16px 16px 32px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    z-index: 10;
+    flex: 0 0 auto; background: var(--bg-panel);
+    padding: 16px 16px 32px 16px; display: flex; flex-direction: column; gap: 12px; z-index: 10;
   }
-
-  .control-group {
-    background: #222;
-    border-radius: 12px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
+  .control-group { background: #222; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
   .row { display: flex; align-items: center; gap: 12px; }
   .row-label { width: 60px; font-size: 12px; text-align: right; color: #aaa; }
   .row-control { flex: 1; display: flex; align-items: center; gap: 8px; }
-  
   input[type="range"] { width: 100%; height: 30px; margin: 0; }
-
   .toggle-btn { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 6px; font-size: 12px; }
   .toggle-btn.active { background: #555; border-color: #888; }
 
   /* 録画・写真ボタンエリア */
-  #recordContainer {
-    display: flex;
-    align-items: center;
-    margin-top: 8px;
-    padding: 0 4px;
-  }
-
+  #recordContainer { display: flex; align-items: center; margin-top: 8px; padding: 0 4px; }
   #leftStats, #rightActions { flex: 1; }
-  
   #leftStats { display: flex; flex-direction: column; gap: 2px; }
   #infoText { font-size: 10px; color: #aaa; line-height: 1.3; }
   #infoTime { font-size: 18px; font-weight: bold; font-variant-numeric: tabular-nums; color: white; }
   #infoTime.active { color: var(--recording); }
-
   #centerBtn { flex: 0 0 auto; display: flex; justify-content: center; }
-
   #recordBtn {
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    background: var(--primary);
-    border: 4px solid white;
-    outline: 2px solid transparent;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    transition: all 0.2s ease;
-    text-indent: -9999px; 
+    width: 65px; height: 65px; border-radius: 50%;
+    background: var(--primary); border: 4px solid white; outline: 2px solid transparent;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.2s ease; text-indent: -9999px; 
   }
   #recordBtn:active { transform: scale(0.95); background: var(--primary-active); }
   #recordBtn.recording { background: #34c759; border-radius: 20px; transform: scale(0.8); }
 
-  /* 新機能：写真ボタン */
-  #rightActions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+  #rightActions { display: flex; justify-content: center; align-items: center; }
   #snapBtn {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background: #fff;
-    border: 3px solid #ccc;
-    color: #333;
-    font-size: 10px;
-    font-weight: bold;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    transition: all 0.1s ease;
-    padding: 0;
+    width: 45px; height: 45px; border-radius: 50%;
+    background: #fff; border: 3px solid #ccc; color: #333;
+    font-size: 10px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    transition: all 0.1s ease; padding: 0;
   }
   #snapBtn:active { transform: scale(0.9); background: #eee; }
 
@@ -278,6 +211,7 @@
   @media (orientation: landscape) {
     body { flex-direction: row; }
     #topBar { flex-direction: column; width: 90px; height: 100%; padding: 16px 8px; box-sizing: border-box; }
+    .top-btn-group { flex-direction: column; }
     #settingsPanel { top: 16px; left: 100px; right: auto; }
     #bottomBar { width: 340px; height: 100%; padding: 16px 24px; box-sizing: border-box; overflow-y: auto; justify-content: center; }
     #recordContainer { margin-top: 24px; }
@@ -288,9 +222,12 @@
 <body>
 
 <div id="topBar">
-  <button id="gridToggleBtn" class="icon-btn">Glid</button>
+  <div class="top-btn-group">
+    <button id="gridToggleBtn" class="icon-btn">グリッド</button>
+    <button id="switchCameraBtn" class="icon-btn">🔄 切替</button>
+  </div>
   <div id="status">待機中</div>
-  <button id="settingsToggleBtn" class="icon-btn">⚙ 設定</button>
+  <button id="settingsToggleBtn" class="icon-btn">⚙️ 設定</button>
 </div>
 
 <div id="previewWrapper">
@@ -309,7 +246,6 @@
       <div class="roll-fixed right"></div>
       <div id="rollMoving"></div>
     </div>
-    
     <div id="levelerPitchContainer">
       <div class="pitch-track"></div>
       <div id="pitchCenterMark"></div>
@@ -403,6 +339,7 @@
 // --- UI制御・設定の保存 ---
 const settingsToggleBtn = document.getElementById('settingsToggleBtn');
 const settingsPanel = document.getElementById('settingsPanel');
+const switchCameraBtn = document.getElementById('switchCameraBtn');
 const resSelect = document.getElementById("resolution");
 const fpsSelect = document.getElementById("fps");
 const bitrateSelect = document.getElementById("bitrate");
@@ -413,9 +350,21 @@ const infoTime = document.getElementById("infoTime");
 const levelerOverlay = document.getElementById("levelerOverlay");
 
 let levelerActive = false;
+let currentFacingMode = "environment"; // "environment"(アウト) か "user"(イン)
 
 settingsToggleBtn.addEventListener('click', () => {
   settingsPanel.classList.toggle('show');
+});
+
+// カメラ切替ボタンの処理
+switchCameraBtn.addEventListener('click', () => {
+  if (recorder && recorder.state === "recording") {
+    alert("録画中はカメラを切り替えられません");
+    return;
+  }
+  currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+  localStorage.setItem("av1_facing", currentFacingMode);
+  startCamera();
 });
 
 function loadSettings() {
@@ -423,11 +372,13 @@ function loadSettings() {
   const sFps = localStorage.getItem("av1_fps");
   const sBit = localStorage.getItem("av1_bitrate");
   const sLev = localStorage.getItem("av1_leveler");
+  const sFacing = localStorage.getItem("av1_facing");
   
   if(sRes) resSelect.value = sRes; else resSelect.value = "720x540";
   if(sFps) fpsSelect.value = sFps; else fpsSelect.value = "10";
   if(sBit) bitrateSelect.value = sBit; else bitrateSelect.value = "250000";
   if(sLev) levelerToggle.value = sLev; else levelerToggle.value = "off";
+  if(sFacing) currentFacingMode = sFacing;
   
   updateDisplayData();
   updateLevelerVisibility();
@@ -462,7 +413,6 @@ resSelect.addEventListener("change", updateDisplayData);
 fpsSelect.addEventListener("change", updateDisplayData);
 bitrateSelect.addEventListener("change", updateDisplayData);
 levelerToggle.addEventListener("change", async (e) => {
-  // iOS Safari用 センサー許可
   if (e.target.value === "on" && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     try {
       const permission = await DeviceOrientationEvent.requestPermission();
@@ -523,7 +473,7 @@ async function startCamera() {
       width: { ideal: idealW },
       height: { ideal: idealH },
       frameRate: { ideal: fps },
-      facingMode: "environment"
+      facingMode: currentFacingMode // 変数を使ってイン/アウトを切り替え
     }
   };
   
@@ -531,6 +481,14 @@ async function startCamera() {
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     preview.srcObject = stream;
     statusEl.textContent = "待機中";
+    
+    // インカメラの時はプレビューを左右反転させて鏡のように見せる
+    if (currentFacingMode === "user") {
+      preview.style.transform = "scaleX(-1)";
+    } else {
+      preview.style.transform = "scaleX(1)";
+    }
+
     videoTrack = stream.getVideoTracks()[0];
     capabilities = videoTrack.getCapabilities();
     settings = videoTrack.getSettings();
@@ -554,6 +512,7 @@ function setupControls() {
   exposureSupported = !!capabilities.exposureCompensation;
   focusDistanceSupported = !!capabilities.focusDistance;
 
+  // インカメラなどサポート外の機能は無効化されるようになっています
   if (zoomSupported) {
     zoomSlider.min = capabilities.zoom.min;
     zoomSlider.max = capabilities.zoom.max;
@@ -568,13 +527,15 @@ function setupControls() {
     exposureSlider.min = min; exposureSlider.max = max; exposureSlider.step = capabilities.exposureCompensation.step || 1;
     exposureSlider.value = settings.exposureCompensation || 0;
     exposureMode = "auto"; exposureModeBtn.textContent = "AUTO"; exposureRow.style.display = "none";
-  } else { exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応"; }
+    exposureModeBtn.disabled = false;
+  } else { exposureModeBtn.disabled = true; exposureModeBtn.textContent = "未対応"; exposureRow.style.display = "none"; }
   if (focusDistanceSupported) {
     const min = capabilities.focusDistance.min || 0; const max = capabilities.focusDistance.max || 1;
     focusSlider.min = min; focusSlider.max = max; focusSlider.step = capabilities.focusDistance.step || 0.01;
     focusSlider.value = settings.focusDistance || min;
     focusMode = "auto"; focusModeBtn.textContent = "AUTO"; focusRow.style.display = "none";
-  } else { focusModeBtn.disabled = true; focusModeBtn.textContent = "未対応"; }
+    focusModeBtn.disabled = false;
+  } else { focusModeBtn.disabled = true; focusModeBtn.textContent = "未対応"; focusRow.style.display = "none"; }
   applyExposureMode();
   applyFocusMode();
 }
@@ -627,6 +588,12 @@ snapBtn.addEventListener("click", () => {
   const canvas = document.createElement("canvas");
   canvas.width = preview.videoWidth; canvas.height = preview.videoHeight;
   const ctx = canvas.getContext("2d");
+  
+  // インカメラ時は保存する写真も左右反転させる
+  if (currentFacingMode === "user") {
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
   
   const dataUrl = canvas.toDataURL("image/jpeg", 0.95); 
@@ -636,7 +603,7 @@ snapBtn.addEventListener("click", () => {
   a.href = dataUrl; a.download = f; a.click();
 });
 
-/* --- 水準器 処理（3D重力ベクトル方式・完全対応版） --- */
+/* --- 水準器 処理（3D重力ベクトル方式） --- */
 window.addEventListener("deviceorientation", (e) => {
   if (!levelerActive) return;
 
@@ -644,62 +611,39 @@ window.addEventListener("deviceorientation", (e) => {
   let g = e.gamma;
   if (b === null || g === null) return;
 
-  // 角度をラジアンに変換
   const radB = b * Math.PI / 180;
   const radG = g * Math.PI / 180;
 
-  // スマホ本体を基準とした重力ベクトル（X, Y, Z）を計算
-  // これにより、端末がどの向きに回転していても正確な重力の方向がわかります
   const gx = Math.cos(radB) * Math.sin(radG);
   const gy = Math.sin(radB);
   const gz = Math.cos(radB) * Math.cos(radG);
 
-  // 画面の向き（縦持ち・横持ち）に合わせて、画面基準のベクトル（sx, sy, sz）に変換
   const angle = (screen.orientation || {}).angle || window.orientation || 0;
   let sx, sy, sz;
 
   if (angle === 90) {
-    // 横持ち（左側が下）
-    sx = gy;
-    sy = -gx;
-    sz = gz;
+    sx = gy; sy = -gx; sz = gz;
   } else if (angle === -90 || angle === 270) {
-    // 横持ち（右側が下）
-    sx = -gy;
-    sy = gx;
-    sz = gz;
+    sx = -gy; sy = gx; sz = gz;
   } else if (angle === 180) {
-    // 縦持ち（逆さま）
-    sx = -gx;
-    sy = -gy;
-    sz = gz;
+    sx = -gx; sy = -gy; sz = gz;
   } else {
-    // 縦持ち（標準）
-    sx = gx;
-    sy = gy;
-    sz = gz;
+    sx = gx; sy = gy; sz = gz;
   }
 
-  // ロール（左右の傾き）と ピッチ（前後のあおり）を計算
-  // Math.atan2 を使うことで、常に「レンズを前に向けてスマホが垂直に立っている状態」が 0度 になります
   let roll = Math.atan2(sx, sy) * 180 / Math.PI;
   let pitch = Math.atan2(sz, sy) * 180 / Math.PI;
 
-  // UIの取得
   const rollMoving = document.getElementById("rollMoving");
   const rollFixed = document.querySelectorAll(".roll-fixed");
   const pitchMoving = document.getElementById("pitchMoving");
   const pitchCenterMark = document.getElementById("pitchCenterMark");
 
-  // 【1】ローリングの反映（左右の傾き）
   rollMoving.style.transform = `translate(-50%, -50%) rotate(${-roll}deg)`;
-
-  // 【2】ピッチング（あおり）の反映
-  // カメラを下に向けるとバーが上がり、上に向けると下がる（飛行機の人工水平儀と同じ直感的な動き）
+  
   let pitchY = Math.max(-90, Math.min(90, -pitch * 2));
   pitchMoving.style.transform = `translateY(calc(-50% + ${pitchY}px))`;
 
-  // 【3】色の判定と反映（水平・垂直ともに±1.5度以内なら緑色に光る）
   const isRollLevel = Math.abs(roll) < 1.5;
   const isPitchLevel = Math.abs(pitch) < 1.5;
   const colorGreen = "#34c759";
@@ -708,10 +652,10 @@ window.addEventListener("deviceorientation", (e) => {
 
   rollMoving.style.backgroundColor = isRollLevel ? colorGreen : colorWhite;
   rollFixed.forEach(el => el.style.backgroundColor = isRollLevel ? colorGreen : colorFaded);
-
   pitchMoving.style.backgroundColor = isPitchLevel ? colorGreen : colorWhite;
   pitchCenterMark.style.backgroundColor = isPitchLevel ? colorGreen : colorFaded;
 });
+
 /* --- 録画処理 --- */
 function createRecorder() {
   const bps = parseInt(bitrateSelect.value, 10);
